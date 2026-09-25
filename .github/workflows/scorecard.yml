@@ -1,0 +1,47 @@
+name: Scorecard
+
+# OpenSSF Scorecard: https://securityscorecards.dev/
+# Results are published as a workflow artifact (and to the OpenSSF API if the secret is set),
+# so the project's supply-chain posture is measured continuously instead of asserted.
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "23 3 * * 1"   # Mondays
+  workflow_dispatch:
+
+permissions: read-all
+
+jobs:
+  analysis:
+    name: Scorecard
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      security-events: write            # upload SARIF to code scanning
+      id-token: write                   # signed SLSA attestations of the results
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      # Pinned by release tag; Dependabot opens the update PRs (.github/dependabot.yml).
+      # Pinning to a commit SHA (Scorecard's maximum score here) is tracked in ROADMAP.md.
+      - name: Run scorecard
+        uses: ossf/scorecard-action@v2.4.3
+        with:
+          results_file: results.sarif
+          results_format: sarif
+          publish_results: true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: scorecard
+          path: results.sarif
+          retention-days: 90
+
+      - uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: results.sarif

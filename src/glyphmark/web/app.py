@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Flask routes. Every endpoint is a thin wrapper over the exact same core the
 CLI calls, so the two interfaces can never diverge.
 
@@ -82,6 +83,12 @@ def create_app() -> Flask:
     def _headers(resp):
         resp.headers.setdefault("X-Content-Type-Options", "nosniff")
         resp.headers.setdefault("Referrer-Policy", "same-origin")
+        # Nothing here is ever framed or needs device APIs: this is a local single-user tool, so
+        # deny both rather than leave clickjacking and phantom-permission surface open.
+        resp.headers.setdefault("X-Frame-Options", "DENY")
+        resp.headers.setdefault(
+            "Permissions-Policy", "camera=(), microphone=(), geolocation=(), interest-cohort=()"
+        )
         if request.path.startswith("/docs"):
             # MkDocs Material injects a small inline bootstrap script (palette toggle), so the docs
             # need 'unsafe-inline' for scripts. Everything else stays same-origin only.
@@ -92,7 +99,7 @@ def create_app() -> Flask:
                 "img-src 'self' data:; "
                 "font-src 'self' data:; "
                 "connect-src 'self'; "
-                "base-uri 'none'; form-action 'none'"
+                "base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
             )
         else:
             csp = (
@@ -103,23 +110,25 @@ def create_app() -> Flask:
                 "font-src 'self' https://fonts.gstatic.com data:; "
                 "img-src 'self' data:; "
                 "connect-src 'self'; "
-                "base-uri 'none'; form-action 'none'"
+                "base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
             )
         resp.headers.setdefault("Content-Security-Policy", csp)
         return resp
 
     @app.errorhandler(ApiError)
     def _api_error(exc: ApiError):
-        return jsonify({"error": str(exc), "type": type(exc.__cause__ or exc).__name__,
-                        "exit_code": exc.code}), exc.status
+        return jsonify(
+            {"error": str(exc), "type": type(exc.__cause__ or exc).__name__, "exit_code": exc.code}
+        ), exc.status
 
     @app.errorhandler(404)
     def _not_found(_e):
         if request.path.startswith("/api/"):
             return jsonify({"error": "no such endpoint"}), 404
         if request.path.startswith("/docs"):
-            return render_template("docs_missing.html", info=docs_site.status(),
-                                   version=__version__), 404
+            return render_template(
+                "docs_missing.html", info=docs_site.status(), version=__version__
+            ), 404
         return render_template("index.html"), 404
 
     @app.errorhandler(413)
@@ -154,8 +163,9 @@ def create_app() -> Flask:
     def docs_home():
         site = docs_site.build_dir()
         if not docs_site.is_built(site):
-            return render_template("docs_missing.html", info=docs_site.status(),
-                                   version=__version__)
+            return render_template(
+                "docs_missing.html", info=docs_site.status(), version=__version__
+            )
         return send_from_directory(site, "index.html")
 
     @app.get("/docs/<path:asset>")
@@ -163,35 +173,46 @@ def create_app() -> Flask:
         site = docs_site.build_dir()
         if not docs_site.is_built(site):
             abort(404)
-        return send_from_directory(site, asset)   # 404s on traversal attempts
+        return send_from_directory(site, asset)  # 404s on traversal attempts
 
     @app.get("/healthz")
     def healthz():
-        return jsonify({"status": "ok", "version": __version__, "schemes": len(SCHEMES),
-                        "docs": docs_site.is_built()})
+        return jsonify(
+            {
+                "status": "ok",
+                "version": __version__,
+                "schemes": len(SCHEMES),
+                "docs": docs_site.is_built(),
+            }
+        )
 
     # ------------------------------------------------------------------ api #
     @app.get("/api/meta")
     def api_meta():
-        return jsonify({
-            "version": __version__,
-            "schemes": [s.to_dict() for s in SCHEMES],
-            "sanitize_stages": stage_docs(),
-            "default_pipeline": DEFAULT_PIPELINE,
-            "placements": list(PLACEMENTS),
-            "characters": all_reference_rows(),
-            "samples": {
-                "cover": SAMPLE_COVER,
-                "payload": SAMPLE_PAYLOAD["provenance"],
-                "payload_json": SAMPLE_PAYLOAD,
-            },
-            "exit_codes": {
-                "0": "ok", "1": "error", "3": "no payload found",
-                "4": "corrupt frame or wrong key", "5": "carrier too small",
-                "6": "detection threshold reached",
-            },
-            "docs": {"built": docs_site.is_built(), "url": docs_site.URL},
-        })
+        return jsonify(
+            {
+                "version": __version__,
+                "schemes": [s.to_dict() for s in SCHEMES],
+                "sanitize_stages": stage_docs(),
+                "default_pipeline": DEFAULT_PIPELINE,
+                "placements": list(PLACEMENTS),
+                "characters": all_reference_rows(),
+                "samples": {
+                    "cover": SAMPLE_COVER,
+                    "payload": SAMPLE_PAYLOAD["provenance"],
+                    "payload_json": SAMPLE_PAYLOAD,
+                },
+                "exit_codes": {
+                    "0": "ok",
+                    "1": "error",
+                    "3": "no payload found",
+                    "4": "corrupt frame or wrong key",
+                    "5": "carrier too small",
+                    "6": "detection threshold reached",
+                },
+                "docs": {"built": docs_site.is_built(), "url": docs_site.URL},
+            }
+        )
 
     @app.post("/api/encode")
     def api_encode():
@@ -219,8 +240,11 @@ def create_app() -> Flask:
 
         def work():
             text = _text_field(data, "text", "watermarked")
-            result = decode(text, key=_str_field(data, "key") or None,
-                            scheme_id=_str_field(data, "scheme", "auto"))
+            result = decode(
+                text,
+                key=_str_field(data, "key") or None,
+                scheme_id=_str_field(data, "scheme", "auto"),
+            )
             return jsonify(result.to_dict())
 
         return _core_errors(work)
@@ -267,11 +291,13 @@ def create_app() -> Flask:
             raise ApiError("'schemes' must be a list")
         key = _str_field(data, "key") or None
         results = [roundtrip_ok(s, key=key) for s in ids]
-        return jsonify({
-            "results": results,
-            "passed": sum(1 for r in results if r["ok"]),
-            "total": len(results),
-        })
+        return jsonify(
+            {
+                "results": results,
+                "passed": sum(1 for r in results if r["ok"]),
+                "total": len(results),
+            }
+        )
 
     return app
 

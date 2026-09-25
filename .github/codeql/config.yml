@@ -1,0 +1,21 @@
+# CodeQL configuration for GlyphMark.
+# https://codeql.github.com/docs/codeql-language-guides/customizing-a-codeql-database-for-your-codebase/
+name: "GlyphMark CodeQL"
+
+# `security-and-quality` catches correctness issues in a text-parsing tool, not just
+# injection: uncontrolled recursion, quadratic blowups and resource exhaustion are the
+# realistic failure modes when untrusted text is the input.
+queries:
+  - uses: security-and-quality
+
+paths:
+  - src
+  - tools
+paths-ignore:
+  # Build output and vendored/bundled assets are not first-party source.
+  - build
+  - node_modules
+  - src/glyphmark/web/static/vendor
+
+# jsdom is a dev-only test dependency; its bundle is not shipped.
+  - "**/*.min.js"

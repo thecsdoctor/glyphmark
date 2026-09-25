@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Watermark channel registry.
 
 A *scheme* is a bidirectional mapping between bit groups and a set of Unicode /
@@ -26,8 +27,25 @@ from dataclasses import dataclass, field
 FAMILY_INSERT = "insert"
 FAMILY_SUBSTITUTE = "substitute"
 
-SPACE_CHARS = {0x20, 0xA0, 0x1680, 0x2000, 0x2001, 0x2002, 0x2003, 0x2004, 0x2005,
-               0x2006, 0x2007, 0x2008, 0x2009, 0x200A, 0x202F, 0x205F, 0x3000}
+SPACE_CHARS = {
+    0x20,
+    0xA0,
+    0x1680,
+    0x2000,
+    0x2001,
+    0x2002,
+    0x2003,
+    0x2004,
+    0x2005,
+    0x2006,
+    0x2007,
+    0x2008,
+    0x2009,
+    0x200A,
+    0x202F,
+    0x205F,
+    0x3000,
+}
 
 
 def _cps(*codes: int) -> str:
@@ -44,40 +62,93 @@ def _run(start: int, end: int) -> str:
 
 ZW_BINARY = _cps(0x200B, 0x200C)
 ZW_OCTAL = _cps(0x200B, 0x200C, 0x200D, 0x2060, 0x2061, 0x2062, 0x2063, 0x2064)
-OMNI_16 = _cps(0x200B, 0x200C, 0x200D, 0x2060, 0x2061, 0x2062, 0x2063, 0x2064,
-               0xFEFF, 0x180E, 0x3164, 0xFFA0, 0x200E, 0x200F, 0x061C, 0x2066)
-TAG_64 = _run(0xE0020, 0xE005F)          # mirrors ASCII 0x20-0x5F
-VS_256 = _run(0xFE00, 0xFE0F) + _run(0xE0100, 0xE01EF)   # exactly 256 selectors
+OMNI_16 = _cps(
+    0x200B,
+    0x200C,
+    0x200D,
+    0x2060,
+    0x2061,
+    0x2062,
+    0x2063,
+    0x2064,
+    0xFEFF,
+    0x180E,
+    0x3164,
+    0xFFA0,
+    0x200E,
+    0x200F,
+    0x061C,
+    0x2066,
+)
+TAG_64 = _run(0xE0020, 0xE005F)  # mirrors ASCII 0x20-0x5F
+VS_256 = _run(0xFE00, 0xFE0F) + _run(0xE0100, 0xE01EF)  # exactly 256 selectors
 BIDI_4 = _cps(0x200E, 0x200F, 0x2066, 0x2069)
 FILLER_2 = _cps(0x3164, 0xFFA0)
 COMBINING_16 = _run(0x0300, 0x030F)
-SPACE_16 = _cps(0x0020, 0x00A0, 0x1680, 0x2002, 0x2003, 0x2004, 0x2005, 0x2006,
-                0x2007, 0x2008, 0x2009, 0x200A, 0x202F, 0x205F, 0x3000, 0x180E)
-CTRL_16 = _cps(0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x0E,
-               0x0F, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16)
+SPACE_16 = _cps(
+    0x0020,
+    0x00A0,
+    0x1680,
+    0x2002,
+    0x2003,
+    0x2004,
+    0x2005,
+    0x2006,
+    0x2007,
+    0x2008,
+    0x2009,
+    0x200A,
+    0x202F,
+    0x205F,
+    0x3000,
+    0x180E,
+)
+CTRL_16 = _cps(
+    0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x0E, 0x0F, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16
+)
 
 # --------------------------------------------------------------------------- #
 # Substitution tables: (base char, look-alike char). bit 0 = base, bit 1 = alt.
 # --------------------------------------------------------------------------- #
 
 HOMOGLYPH_PAIRS: list[tuple[str, str]] = [
-    ("a", "а"), ("c", "с"), ("e", "е"), ("o", "ο"), ("p", "р"),
-    ("x", "х"), ("i", "і"), ("j", "ј"), ("s", "ѕ"), ("k", "к"),
-    ("y", "у"), ("l", "ӏ"), ("d", "ԁ"),
-    ("A", "А"), ("B", "В"), ("C", "С"), ("E", "Е"), ("H", "Н"),
-    ("K", "К"), ("M", "М"), ("O", "Ο"), ("P", "Р"), ("S", "Ѕ"),
-    ("T", "Т"), ("X", "Х"), ("Y", "У"),
+    ("a", "а"),
+    ("c", "с"),
+    ("e", "е"),
+    ("o", "ο"),
+    ("p", "р"),
+    ("x", "х"),
+    ("i", "і"),
+    ("j", "ј"),
+    ("s", "ѕ"),
+    ("k", "к"),
+    ("y", "у"),
+    ("l", "ӏ"),
+    ("d", "ԁ"),
+    ("A", "А"),
+    ("B", "В"),
+    ("C", "С"),
+    ("E", "Е"),
+    ("H", "Н"),
+    ("K", "К"),
+    ("M", "М"),
+    ("O", "Ο"),
+    ("P", "Р"),
+    ("S", "Ѕ"),
+    ("T", "Т"),
+    ("X", "Х"),
+    ("Y", "У"),
 ]
 
 FULLWIDTH_PAIRS: list[tuple[str, str]] = [(chr(c), chr(c + 0xFEE0)) for c in range(0x21, 0x7F)]
 
 PUNCT_PAIRS: list[tuple[str, str]] = [
-    ("-", "‐"),   # HYPHEN
-    ("'", "ʼ"),   # MODIFIER LETTER APOSTROPHE
-    ('"', '"'),   # DOUBLE PRIME QUOTATION MARK
-    ("*", "∗"),   # ASTERISK OPERATOR
-    ("~", "∼"),   # TILDE OPERATOR
-    (".", "․"),   # ONE DOT LEADER
+    ("-", "‐"),  # HYPHEN
+    ("'", "ʼ"),  # MODIFIER LETTER APOSTROPHE
+    ('"', '"'),  # DOUBLE PRIME QUOTATION MARK
+    ("*", "∗"),  # ASTERISK OPERATOR
+    ("~", "∼"),  # TILDE OPERATOR
+    (".", "․"),  # ONE DOT LEADER
 ]
 
 SPACE_PAIRS: list[tuple[str, str]] = [(" ", ch) for ch in SPACE_16[1:]]
@@ -161,30 +232,34 @@ class Scheme:
         rows: list[dict] = []
         if self.family == FAMILY_INSERT:
             for digit, ch in enumerate(self.symbols):
-                rows.append({
-                    "digit": digit,
-                    "bit_value": format(digit, f"0{self.bits_per_unit}b"),
-                    "char": ch,
-                    "codepoint": f"U+{ord(ch):04X}",
-                    "category": unicodedata.category(ch),
-                    "name": unicodedata.name(ch, "<unassigned code point>"),
-                    "utf8": " ".join(f"{b:02X}" for b in ch.encode("utf-8")),
-                    "render": render_hint(ch),
-                })
+                rows.append(
+                    {
+                        "digit": digit,
+                        "bit_value": format(digit, f"0{self.bits_per_unit}b"),
+                        "char": ch,
+                        "codepoint": f"U+{ord(ch):04X}",
+                        "category": unicodedata.category(ch),
+                        "name": unicodedata.name(ch, "<unassigned code point>"),
+                        "utf8": " ".join(f"{b:02X}" for b in ch.encode("utf-8")),
+                        "render": render_hint(ch),
+                    }
+                )
         else:
             for base, options in self.alternatives.items():
                 for i, alt in enumerate(options, start=1):
-                    rows.append({
-                        "digit": i,
-                        "bit_value": format(i, f"0{self.bits_per_unit}b") + " (0 = base)",
-                        "char": alt,
-                        "codepoint": f"U+{ord(alt):04X}",
-                        "category": unicodedata.category(alt),
-                        "name": unicodedata.name(alt, "<unassigned code point>"),
-                        "utf8": " ".join(f"{b:02X}" for b in alt.encode("utf-8")),
-                        "render": f"{base}  →  {alt}",
-                        "base": base,
-                    })
+                    rows.append(
+                        {
+                            "digit": i,
+                            "bit_value": format(i, f"0{self.bits_per_unit}b") + " (0 = base)",
+                            "char": alt,
+                            "codepoint": f"U+{ord(alt):04X}",
+                            "category": unicodedata.category(alt),
+                            "name": unicodedata.name(alt, "<unassigned code point>"),
+                            "utf8": " ".join(f"{b:02X}" for b in alt.encode("utf-8")),
+                            "render": f"{base}  →  {alt}",
+                            "base": base,
+                        }
+                    )
         return rows
 
     # ---- carrier arithmetic ---------------------------------------------- #
@@ -279,13 +354,14 @@ _DEFS: list[dict] = [
         label="Zero-width binary (ZWSP/ZWNJ)",
         family=FAMILY_INSERT,
         blurb="The classic 1-bit channel: ZWSP = 0, ZWNJ = 1. Maximum tool "
-              "compatibility, minimum density.",
+        "compatibility, minimum density.",
         bits_per_unit=1,
         alphabet=ZW_BINARY,
         carrier="one insertion point per character",
-        stealth=5, survival=3,
+        stealth=5,
+        survival=3,
         detection="regex [\\u200B-\\u200D] or a category=='Cf' sweep; NFKC does not "
-                  "remove it, explicit stripping does",
+        "remove it, explicit stripping does",
         killed_by=("strip_zero_width", "strip_format"),
         notes=("Nearly every 'clean text' library already knows these two code points.",),
         tags=("invisible", "simple", "interop"),
@@ -295,13 +371,14 @@ _DEFS: list[dict] = [
         label="Zero-width octal (8 invisible ops)",
         family=FAMILY_INSERT,
         blurb="3 bits per inserted char: ZWSP/ZWNJ/ZWJ/WJ plus the four invisible "
-              "mathematical operators U+2061..U+2064.",
+        "mathematical operators U+2061..U+2064.",
         bits_per_unit=3,
         alphabet=ZW_OCTAL,
         carrier="one insertion point per character",
-        stealth=5, survival=3,
+        stealth=5,
+        survival=3,
         detection="naive filters strip U+200B-200D only, so U+2061-2064 often survive; "
-                  "a full Cf sweep removes all eight",
+        "a full Cf sweep removes all eight",
         killed_by=("strip_zero_width", "strip_format"),
         notes="The invisible math operators are the most commonly missed part of a sanitizer.",
         tags=("invisible", "math-ink"),
@@ -311,16 +388,19 @@ _DEFS: list[dict] = [
         label="Omni-invisible base-16",
         family=FAMILY_INSERT,
         blurb="Zero-widths + invisible operators + BOM + Mongolian vowel separator + "
-              "Hangul fillers + bidi marks in one 16-symbol radix: 4 bits per char.",
+        "Hangul fillers + bidi marks in one 16-symbol radix: 4 bits per char.",
         bits_per_unit=4,
         alphabet=OMNI_16,
         carrier="one insertion point per character",
-        stealth=4, survival=4,
+        stealth=4,
+        survival=4,
         detection="maximal code-point spread — only a block allow-list catches all of it",
         killed_by=("strip_zero_width", "strip_format", "strip_bidi", "strip_fillers"),
-        notes=("U+3164 / U+FFA0 are category Lo (letters), so category-based 'strip Cf' "
-               "filters walk past them.",
-               "Unpaired bidi isolates can glitch glyph ordering inside RTL text."),
+        notes=(
+            "U+3164 / U+FFA0 are category Lo (letters), so category-based 'strip Cf' "
+            "filters walk past them.",
+            "Unpaired bidi isolates can glitch glyph ordering inside RTL text.",
+        ),
         tags=("invisible", "mixed-channel", "bidi"),
     ),
     dict(
@@ -328,16 +408,19 @@ _DEFS: list[dict] = [
         label="Unicode Tags block (Plane 14)",
         family=FAMILY_INSERT,
         blurb="U+E0020..U+E005F mirror ASCII 0x20..0x5F and are suppressed by renderers. "
-              "6 bits per char — the channel LLM tokenizers read back as text.",
+        "6 bits per char — the channel LLM tokenizers read back as text.",
         bits_per_unit=6,
         alphabet=TAG_64,
         carrier="one insertion point per character",
-        stealth=5, survival=2,
+        stealth=5,
+        survival=2,
         detection="range filter U+E0000-E007F; UTF-8 sniff F3 A0 80 80 .. F3 A0 81 BF",
         killed_by=("strip_tags",),
-        notes=("Rejected by strict XML/JSON parsers and some DB collations.",
-               "Social platforms strip Plane 14 on ingestion; raw paste buffers keep it.",
-               "This is the block behind hidden-instruction injection research."),
+        notes=(
+            "Rejected by strict XML/JSON parsers and some DB collations.",
+            "Social platforms strip Plane 14 on ingestion; raw paste buffers keep it.",
+            "This is the block behind hidden-instruction injection research.",
+        ),
         tags=("invisible", "high-capacity", "llm-relevant"),
     ),
     dict(
@@ -345,17 +428,20 @@ _DEFS: list[dict] = [
         label="Variation selectors (1 byte per anchor)",
         family=FAMILY_INSERT,
         blurb="VS1-VS16 + VS17-VS256 = exactly 256 selectors, i.e. one whole hidden byte "
-              "clamped onto each anchor character.",
+        "clamped onto each anchor character.",
         bits_per_unit=8,
         alphabet=VS_256,
         anchor_required=True,
         carrier="one anchor character per payload byte",
-        stealth=4, survival=3,
+        stealth=4,
+        survival=3,
         detection="combining/selector sweep (Mn/Me categories) or NFKC, which drops "
-                  "selectors sitting on non-emoji bases",
+        "selectors sitting on non-emoji bases",
         killed_by=("strip_variation_selectors", "strip_combining"),
-        notes=("Highest density per character in Unicode.",
-               "Some fonts show a dotted box for selectors on unusual base characters."),
+        notes=(
+            "Highest density per character in Unicode.",
+            "Some fonts show a dotted box for selectors on unusual base characters.",
+        ),
         tags=("invisible", "high-capacity", "anchor-bound"),
     ),
     dict(
@@ -363,13 +449,14 @@ _DEFS: list[dict] = [
         label="Bidirectional marks (base-4)",
         family=FAMILY_INSERT,
         blurb="LRM/RLM plus first/last bidi isolates: 2 bits per char, invisible in "
-              "left-to-right prose.",
+        "left-to-right prose.",
         bits_per_unit=2,
         alphabet=BIDI_4,
         carrier="one insertion point per character",
-        stealth=3, survival=3,
+        stealth=3,
+        survival=3,
         detection="any bidi control in an all-LTR document is itself the signal — "
-                  "grep U+202A-U+202E and U+2066-U+2069",
+        "grep U+202A-U+202E and U+2066-U+2069",
         killed_by=("strip_bidi", "strip_format"),
         notes=("Mismatched overrides visibly reverse neighbouring glyphs — the classic tell.",),
         tags=("invisible", "bidi", "flagged-by-owasp"),
@@ -379,13 +466,14 @@ _DEFS: list[dict] = [
         label="Hangul fillers (Cf-stripper blind spot)",
         family=FAMILY_INSERT,
         blurb="U+3164 / U+FFA0 render as nothing in Latin text yet are *letters* (Lo), so "
-              "category-based Cf filters miss them entirely.",
+        "category-based Cf filters miss them entirely.",
         bits_per_unit=1,
         alphabet=FILLER_2,
         carrier="one insertion point per character",
-        stealth=4, survival=4,
+        stealth=4,
+        survival=4,
         detection="block allow-list, or a mixed-script check that rejects Hangul letters "
-                  "inside Latin words",
+        "inside Latin words",
         killed_by=("strip_fillers", "script_allowlist"),
         notes=("Useful fallback channel to pair with a homoglyph watermark.",),
         tags=("invisible", "letters", "blind-spot"),
@@ -395,17 +483,20 @@ _DEFS: list[dict] = [
         label="Cross-script homoglyphs",
         family=FAMILY_SUBSTITUTE,
         blurb="Latin letters swapped for Cyrillic/Greek/Armenian look-alikes. Nothing "
-              "invisible is added, so almost no sanitizer catches it.",
+        "invisible is added, so almost no sanitizer catches it.",
         bits_per_unit=1,
         pairs=HOMOGLYPH_PAIRS,
         carrier="each letter that has a confusable counterpart",
-        stealth=4, survival=5,
+        stealth=4,
+        survival=5,
         detection="UTS #39 skeleton normalization + mixed-script profile; "
-                  "NFKC does NOT collapse these",
+        "NFKC does NOT collapse these",
         killed_by=("confusables_to_ascii", "script_allowlist"),
-        notes=("Survives copy-paste, JSON, SQL and social platforms.",
-               "Breaks exact matching / search / case-folding — which is also why "
-               "homograph phishing works."),
+        notes=(
+            "Survives copy-paste, JSON, SQL and social platforms.",
+            "Breaks exact matching / search / case-folding — which is also why "
+            "homograph phishing works.",
+        ),
         tags=("visible-substitution", "most-robust", "uts39"),
     ),
     dict(
@@ -413,15 +504,16 @@ _DEFS: list[dict] = [
         label="Fullwidth look-alikes",
         family=FAMILY_SUBSTITUTE,
         blurb="ASCII 0x21-0x7E replaced by its U+FF01-FF5E twin: identical in most mono "
-              "UIs, and NFKC is the only reliable killer.",
+        "UIs, and NFKC is the only reliable killer.",
         bits_per_unit=1,
         pairs=FULLWIDTH_PAIRS,
         carrier="any printable ASCII character",
-        stealth=3, survival=3,
+        stealth=3,
+        survival=3,
         detection="one NFKC pass collapses the entire compatibility block",
         killed_by=("nfkc", "fullwidth_fold"),
         notes="Every printable character is a slot, so capacity is excellent — but the "
-              "glyph advance changes in proportional fonts.",
+        "glyph advance changes in proportional fonts.",
         tags=("visible-substitution", "compat-chars"),
     ),
     dict(
@@ -429,11 +521,12 @@ _DEFS: list[dict] = [
         label="Punctuation twins",
         family=FAMILY_SUBSTITUTE,
         blurb="Hyphen, apostrophe, quote, asterisk, tilde and period replaced by "
-              "near-identical typographic twins.",
+        "near-identical typographic twins.",
         bits_per_unit=1,
         pairs=PUNCT_PAIRS,
         carrier="each occurrence of a mappable punctuation character",
-        stealth=3, survival=4,
+        stealth=3,
+        survival=4,
         detection="typographic normalization (curly → straight quotes); NFKC partially works",
         killed_by=("punct_fold", "nfkc"),
         notes=("Low capacity in prose; good enough to sign code blocks and config dumps.",),
@@ -444,17 +537,20 @@ _DEFS: list[dict] = [
         label="Space alphabet (4 bits per gap)",
         family=FAMILY_SUBSTITUTE,
         blurb="Each word-gap space becomes one of 15 look-alike blanks: NBSP, en/em/thin/"
-              "hair, NNBSP, ideographic, Ogham, Mongolian vowel separator.",
+        "hair, NNBSP, ideographic, Ogham, Mongolian vowel separator.",
         bits_per_unit=4,
         pairs=SPACE_PAIRS,
         alts=SPACE_ALTS,
         carrier="each space in the cover text",
-        stealth=2, survival=2,
+        stealth=2,
+        survival=2,
         detection="HTML unescape and whitespace collapsing, textwrap, trim(); NFKC folds "
-                  "several width variants",
+        "several width variants",
         killed_by=("collapse_spaces", "nfkc"),
-        notes=("Word-wrap and editor auto-format destroy this channel — keep payloads tiny "
-               "or use pre-formatted text."),
+        notes=(
+            "Word-wrap and editor auto-format destroy this channel — keep payloads tiny "
+            "or use pre-formatted text."
+        ),
         tags=("whitespace", "fragile"),
     ),
     dict(
@@ -462,16 +558,19 @@ _DEFS: list[dict] = [
         label="ASCII C0 control nibbles",
         family=FAMILY_INSERT,
         blurb="For pipelines forced to 7-bit ASCII: 16 non-rendering C0 codes carry "
-              "nibbles (4 bits each). Invisible in GUIs, obvious in terminals.",
+        "nibbles (4 bits each). Invisible in GUIs, obvious in terminals.",
         bits_per_unit=4,
         alphabet=CTRL_16,
         carrier="one insertion point per character",
-        stealth=2, survival=2,
+        stealth=2,
+        survival=2,
         ascii_only=True,
         detection="xxd / cat -A caret notation (^A ^B); any isprintable() sweep",
         killed_by=("strip_controls", "ascii_transcode"),
-        notes=("The only family that survives an ISO-8859-1 / US-ASCII transcode.",
-               "Terminals, compilers and web forms strip or escape it aggressively."),
+        notes=(
+            "The only family that survives an ISO-8859-1 / US-ASCII transcode.",
+            "Terminals, compilers and web forms strip or escape it aggressively.",
+        ),
         tags=("ascii-only", "terminal-visible"),
     ),
     dict(
@@ -479,16 +578,19 @@ _DEFS: list[dict] = [
         label="Combining marks (stress test)",
         family=FAMILY_INSERT,
         blurb="16 combining diacritics clamped onto anchor characters. A channel in "
-              "principle, but far from invisible in most fonts.",
+        "principle, but far from invisible in most fonts.",
         bits_per_unit=4,
         alphabet=COMBINING_16,
         anchor_required=True,
         carrier="one anchor character per 4 bits",
-        stealth=1, survival=2,
+        stealth=1,
+        survival=2,
         detection="any NFC/NFKC pass composes or reorders them; regex [\\u0300-\\u036F]",
         killed_by=("strip_combining", "nfkc"),
-        notes=("Bundled as a stress-test channel: it demonstrates why normalization is the "
-               "single highest-value defense."),
+        notes=(
+            "Bundled as a stress-test channel: it demonstrates why normalization is the "
+            "single highest-value defense."
+        ),
         tags=("combining", "low-stealth"),
     ),
 ]
@@ -536,8 +638,10 @@ def get_scheme(scheme_id: str) -> Scheme:
 # Deterministic position spreading (substitution channels)
 # --------------------------------------------------------------------------- #
 
-def select_positions(total: int, need: int, seed: str,
-                     exclude: set[int] | None = None) -> list[int]:
+
+def select_positions(
+    total: int, need: int, seed: str, exclude: set[int] | None = None
+) -> list[int]:
     """Pick ``need`` carrier indices, evenly spread with keyed jitter.
 
     Stable across processes (SHA-256 derived RNG, never ``hash()``), so a decoder

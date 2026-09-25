@@ -74,5 +74,8 @@ nav:
   - Detection & sanitization: defence.md
   - HTTP API: api.md
   - Reference: reference.md
+  - Security model: security.md
   - Responsible use: ethics.md
+  - Contributing: contributing.md
+  - Community & governance: community.md
   - "← Back to the lab": /

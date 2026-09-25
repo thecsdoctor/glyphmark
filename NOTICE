@@ -1,0 +1,42 @@
+# Notice
+
+GlyphMark — text watermarking across the ASCII/Unicode divide
+Copyright (c) 2026 The GlyphMark Authors
+
+This product includes software developed by the GlyphMark Authors, licensed under the MIT License
+(see `LICENSE`).
+
+## Third-party material
+
+The web interface loads three optional assets from a CDN at runtime, and the documentation uses a
+build-time theme. GlyphMark's own logic does not depend on any of them: the UI degrades gracefully
+when they are blocked, which is asserted by `tests/test_web.py`.
+
+| Asset | Use | License | Where |
+|---|---|---|---|
+| [Tailwind CSS](https://tailwindcss.com/) (`@tailwindcss/browser`) | presentational polish in the web UI | MIT | `src/glyphmark/web/templates/index.html` |
+| [Alpine.js](https://alpinejs.dev/) | theme toggle only | MIT | same |
+| [Inter](https://fonts.google.com/specimen/Inter) / [JetBrains Mono](https://fonts.google.com/specimen/JetBrains+Mono) via Google Fonts | typography | SIL Open Font License 1.1 | same |
+| [MkDocs](https://www.mkdocs.org/) | docs build tool (build time) | BSD 2-Clause | `mkdocs.yml`, `pyproject.toml` |
+| [Material for MkDocs](https://squidfunk.github.io/mkdocs-material/) | docs theme (build time) | MIT | `mkdocs.yml` |
+| [Pygments](https://pygments.org/) | code highlighting inside the built docs | BSD 2-Clause | build time |
+| jsdom | dev-only dependency for the headless UI smoke test | MIT | `package.json` |
+
+Generated documentation bundles (under `build/docs/`) contain the Material theme's compiled CSS/JS
+and Pygments-generated markup; those files retain their own upstream headers.
+
+## Unicode data
+
+Code-point names, general categories and normalization are obtained at runtime from Python's
+`unicodedata` standard-library module, whose data derives from the Unicode Character Database
+(https://www.unicode.org/license.html). The curated code-point sets and confusable pairs in
+`src/glyphmark/schemes.py` were compiled by this project (informed by Unicode UTS #39
+confusability data) and are distributed under the MIT License with the Unicode Terms of Use noted
+above.
+
+## Cryptography
+
+This project uses SHA-256 for keystream derivation and CRC32 for integrity, and documents them as
+*obfuscation, not encryption* (`docs/reference.md`). It provides no cryptographic guarantees and is
+not export-controlled cryptographic functionality under ECCN 5D002 (mass-market, public-domain
+cryptographic use only). Update this notice if a real cipher is ever introduced.

@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="GlyphMark">
+  <!--
+    GlyphMark project logo (original work, MIT licence - see LICENSE and NOTICE).
+    Concept: visible characters (solid bars) with invisible marks carried between them
+    (dashed outlines) - a look-alike alphabet hiding in plain sight.
+    Colour values are the web UI tokens in src/glyphmark/web/static/styles.css.
+  -->
+  <defs>
+    <linearGradient id="gm-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0d1526"/>
+      <stop offset="1" stop-color="#141b32"/>
+    </linearGradient>
+    <linearGradient id="gm-ink" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#e8874a"/>
+      <stop offset="1" stop-color="#ffd166"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="16" y="16" width="480" height="480" rx="104" fill="url(#gm-bg)"/>
+  <rect x="16" y="16" width="480" height="480" rx="104" fill="none" stroke="#6d5efc" stroke-opacity=".55" stroke-width="6"/>
+
+  <!-- baseline the text sits on -->
+  <rect x="96" y="368" width="320" height="10" rx="5" fill="#6d5efc" fill-opacity=".45"/>
+
+  <!-- visible characters -->
+  <g fill="url(#gm-ink)">
+    <rect x="96" y="176" width="52" height="164" rx="16"/>
+    <rect x="230" y="146" width="52" height="194" rx="16"/>
+    <rect x="364" y="206" width="52" height="134" rx="16"/>
+  </g>
+
+  <!-- marks carried between them: invisible, but present -->
+  <g fill="none" stroke="#5eead4" stroke-width="9" stroke-dasharray="20 16" stroke-linecap="round">
+    <rect x="163" y="212" width="54" height="128" rx="18"/>
+    <rect x="297" y="240" width="54" height="100" rx="18"/>
+  </g>
+
+  <!-- the frame that makes it verifiable: CRC-protected envelope -->
+  <g fill="none" stroke="#5eead4" stroke-width="12" stroke-linecap="round">
+    <path d="M120 96h-24a24 24 0 0 0-24 24v24"/>
+    <path d="M392 96h24a24 24 0 0 1 24 24v24"/>
+    <path d="M120 416h-24a24 24 0 0 1-24-24v-24"/>
+    <path d="M392 416h24a24 24 0 0 0 24-24v-24"/>
+  </g>
+</svg>

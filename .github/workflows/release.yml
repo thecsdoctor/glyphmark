@@ -1,0 +1,172 @@
+name: Release
+
+# Tag-driven release: v*.*.*  ->  build sdist+wheel -> CycloneDX SBOM -> build provenance
+# attestation -> GitHub Release with all three attached.
+#
+# Publishing to PyPI is the next step and is deliberately not enabled yet (ROADMAP.md): it needs a
+# trusted-publishing configurator on the PyPI side first. The prepared step is at the bottom.
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]+-[a-z]+.[0-9]+"   # PEP 440 pre-releases, e.g. v0.2.0-rc.1
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to build, without the leading v (dry runs)"
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: build + attest
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      sdist: ${{ steps.meta.outputs.sdist }}
+      wheel: ${{ steps.meta.outputs.wheel }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: meta
+        run: |
+          set -euo pipefail
+          if [ -n "${{ inputs.version }}" ]; then
+            v="${{ inputs.version }}"
+          else
+            v="${GITHUB_REF_NAME#v}"
+          fi
+          grep -q "^version = \"$v\"\$" pyproject.toml \
+            || { echo "::error::pyproject.toml version does not match the tag ($v)"; exit 1; }
+          python -c "import re,sys;sys.exit(0 if re.match(r'^\d+\.\d+\.\d+(a\d+|b\d+|rc\d+)?$', sys.argv[1]) else 1)" "$v" \
+            || { echo "::error::version $v is not PEP 440 (release tags are vX.Y.Z[-rc.N])"; exit 1; }
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          echo "sdist=glyphmark-$v.tar.gz" >> "$GITHUB_OUTPUT"
+          echo "wheel=glyphmark-$v-py3-none-any.whl" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        run: python -m pip install --disable-pip-version-check "uv==${UV_VERSION:-0.12}.*"
+
+      - name: Build sdist and wheel (locked)
+        run: |
+          uv sync --frozen --extra dev --extra docs
+          uv build --out-dir dist
+
+      - name: CycloneDX SBOM (from the locked dependency set)
+        run: |
+          uv export --frozen --no-dev --no-emit-project -o requirements.sbom.txt
+          uvx --from cyclonedx-bom cyclonedx-py requirements requirements.sbom.txt \
+            --pyproject pyproject.toml --mc-type application --sv 1.6 --of json \
+            -o "dist/glyphmark-${{ steps.meta.outputs.version }}.cdx.json"
+          python -c "import json,sys;d=json.load(open('dist/glyphmark-${{ steps.meta.outputs.version }}.cdx.json'));print(f\"SBOM: {len(d['components'])} components, spec {d['specVersion']}\")"
+
+      - name: Attest build provenance (SLSA via GitHub)
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: dist/*
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ steps.meta.outputs.version }}
+          path: dist
+          retention-days: 90
+          if-no-files-found: error
+
+  # Proves the release artefacts are usable, not just present: install the wheel in a clean env,
+  # run the whole channel matrix against it, and check the sdist can build the docs.
+  smoke:
+    name: smoke test artefacts
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist-${{ needs.build.outputs.version }}
+          path: dist
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install the wheel from scratch
+        run: |
+          python -m venv .venv-smoke
+          .venv-smoke/bin/pip install --disable-pip-version-check --no-index \
+            --find-links dist "glyphmark==${{ needs.build.outputs.version }}"
+          .venv-smoke/bin/glyphmark --version
+      - name: All channels round-trip from the installed wheel
+        run: .venv-smoke/bin/glyphmark verify
+      - name: Serve and probe the API from the installed wheel
+        run: |
+          .venv-smoke/bin/glyphmark serve --host 127.0.0.1 --port 8199 &
+          for i in $(seq 1 30); do curl -fsS localhost:8199/healthz >/dev/null && break; sleep 1; done
+          curl -fsS localhost:8199/healthz | grep -q '"status": *"ok"'
+          curl -fsS localhost:8199/api/meta | grep -q '"schemes"'
+
+  publish:
+    name: publish release
+    needs: [build, smoke]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write            # create the GitHub Release
+    environment: release
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist-${{ needs.build.outputs.version }}
+          path: dist
+
+      - name: Notes from the changelog
+        id: notes
+        run: |
+          v="${{ needs.build.outputs.version }}"
+          python - "$v" <<'PY'
+          import re, sys, pathlib
+          v = sys.argv[1]
+          text = pathlib.Path("CHANGELOG.md").read_text()
+          m = re.search(rf"^## \[{re.escape(v)}\][^\n]*\n(.*?)(?=^## \[|\Z)", text, re.M | re.S)
+          body = m.group(1).strip() if m else ""
+          body = body or f"See [CHANGELOG.md](https://github.com/OWNER/glyphmark/blob/main/CHANGELOG.md#{v})."
+          pathlib.Path("release-notes.md").write_text(body + "\n\n"
+              "Artefacts: sdist, wheel, CycloneDX SBOM, and SLSA build provenance attestations "
+              "(verify with `gh attestation verify <file> --repo OWNER/glyphmark`).\n")
+          PY
+
+      - name: GitHub Release with artefacts + attestations
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "GlyphMark ${GITHUB_REF_NAME}" \
+            --notes-file release-notes.md \
+            --verify-tag \
+            dist/*
+
+      # ---------------------------------------------------------------------------
+      # PyPI publish (not enabled yet - ROADMAP.md). Requires a PyPI trusted-publishing
+      # configurator for this repo + environment, then uncomment:
+      #
+      # - name: Publish to PyPI (trusted publishing, no stored token)
+      #   uses: pypa/gh-action-pypi-publish@release/v1
+      #   with:
+      #     packages-dir: dist/
+      #     skip-existing: true
+      # ---------------------------------------------------------------------------

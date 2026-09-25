@@ -1,0 +1,28 @@
+# https://editorconfig.org - honoured by editors and by ruff's formatter indirectly (line length
+# comes from pyproject.toml; this keeps editors from fighting it).
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+[*.py]
+indent_size = 4
+max_line_length = 100
+
+[*.{js,mjs,cjs,css,json,yml,yaml,html,md}]
+indent_size = 2
+
+[Makefile]
+indent_style = tab
+
+[*.md]
+# markdown line breaks are semantic in some renderers; leave trailing space alone
+trim_trailing_whitespace = false
+
+[*.svg]
+insert_final_newline = true

@@ -1,0 +1,97 @@
+# Repository settings as code (probot/settings convention: https://github.com/probot/settings).
+# Apply with the GitHub Settings app, or read it as the documented, reviewable statement of
+# branch protection and repo policy that CI and the CNCF review can point at.
+#
+# OWNER placeholders: replace with the canonical GitHub owner; keep identical to the link
+# placeholders in CHANGELOG.md and README.md (a test asserts they agree).
+
+repository:
+  name: glyphmark
+  description: >-
+    Text watermarking across the ASCII/Unicode divide: embed, extract, detect and sanitize invisible
+    marks. Identical functionality from a non-interactive CLI and a web UI + JSON API.
+  homepage: https://github.com/OWNER/glyphmark
+  private: false
+  has_issues: true
+  has_wiki: false
+  has_projects: false
+  has_downloads: false
+  default_branch: main
+  allow_squash_merge: true
+  allow_merge_commit: false
+  allow_rebase_merge: true
+  delete_branch_on_merge: true
+  allow_auto_merge: false
+  enable_automated_security_fixes: true
+  enable_vulnerability_alerts: true
+
+branches:
+  - name: main
+    protection:
+      required_status_checks:
+        strict: true
+        contexts:
+          - test (3.10)
+          - test (3.13)
+          - lint
+          - docs
+          - ui
+          - license-headers
+          - CodeQL
+      required_pull_request_reviews:
+        required_approving_review_count: 1
+        dismiss_stale_reviews: true
+        require_codeowners_review: true
+        restrict_dismissals: false
+      enforce_admins: true
+      required_linear_history: false
+      restrictions: null
+  - name: release-*
+    protection:
+      required_status_checks: null
+      required_pull_request_reviews:
+        required_approving_review_count: 1
+      restrictions:
+        apps: []
+        users: []
+
+labels:
+  - name: bug
+    color: d73a4a
+    description: Something isn't working
+  - name: enhancement
+    color: a2eeef
+    description: New feature or request
+  - name: question
+    color: d4c5f9
+    description: Usage question; answers get folded into docs
+  - name: documentation
+    color: 0075ca
+    description: Docs pages, README, comments
+  - name: good first issue
+    color: 7057ff
+    description: Mentorable, isolated change
+  - name: help wanted
+    color: 008672
+    description: Extra attention needed
+  - name: security
+    color: e4e669
+    description: Security-relevant; coordinate before discussing publicly
+  - name: detection
+    color: f9d0c4
+    description: Findings, severity weights, false positives
+  - name: sanitizer
+    color: c2e0c6
+    description: Sanitization stages and their collateral damage
+  - name: channel
+    color: feef41
+    description: A watermark channel (zw-*, tags, homoglyph, ...)
+  - name: ui
+    color: 1d76db
+    description: Web UI / API surface
+  - name: breaking
+    color: b60205
+    description: Changes CLI flags, JSON fields or the frame format
+  - name: governance
+    color: 5319e7
+    description: Needs a maintainer vote (GOVERNANCE.md)

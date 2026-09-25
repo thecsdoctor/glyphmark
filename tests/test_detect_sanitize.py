@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Detection and sanitization must neutralize every channel this tool writes."""
 
 from __future__ import annotations
@@ -20,8 +21,10 @@ def marked(scheme_id: str, payload: bytes = PAYLOAD) -> str:
 
 
 def test_clean_text_scores_clean() -> None:
-    text = ("Plain prose with normal spaces and ASCII punctuation only, nothing hidden. "
-            "Second sentence, same story.")
+    text = (
+        "Plain prose with normal spaces and ASCII punctuation only, nothing hidden. "
+        "Second sentence, same story."
+    )
     report = detect(text, try_frames=False)
     assert report["verdict"] == "clean", report["findings"]
     assert report["risk_score"] == 0
@@ -63,7 +66,7 @@ def test_tag_block_mirror_is_surfaced() -> None:
 
 
 def test_homoglyph_is_flagged_as_confusable_and_mixed_script() -> None:
-    text = "pl" + chr(0x0501) + chr(0x0435) + "ase send the report"   # Komi D + Cyrillic IE
+    text = "pl" + chr(0x0501) + chr(0x0435) + "ase send the report"  # Komi D + Cyrillic IE
     report = detect(text, try_frames=False)
     kinds = {f["kind"] for f in report["findings"]}
     assert "confusables" in kinds
@@ -88,8 +91,9 @@ def test_c0_controls_are_flagged() -> None:
 
 def test_bidi_override_is_flagged_as_high_severity() -> None:
     text = "a benign sentence " + chr(0x202E) + "evil ordering here"
-    finding = next(f for f in detect(text, try_frames=False)["findings"]
-                   if f["kind"] == "bidi_controls")
+    finding = next(
+        f for f in detect(text, try_frames=False)["findings"] if f["kind"] == "bidi_controls"
+    )
     assert finding["severity"] == "high"
 
 
@@ -102,8 +106,9 @@ def test_zero_width_invisible_operator_gap_is_closed() -> None:
 
 def test_hangul_fillers_are_flagged_despite_being_letters() -> None:
     text = "sentences " + chr(0x3164) + " and " + chr(0xFFA0) + " hidden"
-    finding = next(f for f in detect(text, try_frames=False)["findings"]
-                   if f["kind"] == "hangul_fillers")
+    finding = next(
+        f for f in detect(text, try_frames=False)["findings"] if f["kind"] == "hangul_fillers"
+    )
     assert finding["remove_with"] == "strip_fillers"
 
 
@@ -148,11 +153,11 @@ def test_aggressive_stages_are_opt_in() -> None:
     assert "ascii_transcode" not in DEFAULT_PIPELINE
     assert "script_allowlist" not in DEFAULT_PIPELINE
     text = "Gr" + chr(0x00FC) + "e et " + chr(0x0430) + "n " + chr(0x200B)
-    assert sanitize(text)["text"].startswith("Gr")            # Latin-1 prose survives default
+    assert sanitize(text)["text"].startswith("Gr")  # Latin-1 prose survives default
     folded = sanitize(text, ["ascii_transcode"])["text"]
     assert folded == "Gre et n "
     kept = sanitize(text, ["script_allowlist"])["text"]
-    assert chr(0x00FC) in kept and chr(0x0430) not in kept     # Latin kept, Cyrillic dropped
+    assert chr(0x00FC) in kept and chr(0x0430) not in kept  # Latin kept, Cyrillic dropped
 
 
 def test_every_stage_is_documented_and_reachable() -> None:

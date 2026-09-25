@@ -1,4 +1,18 @@
+<p align="center">
+  <img src="logo/glyphmark.svg" alt="GlyphMark logo: visible characters carrying invisible marks" width="132" height="132">
+</p>
+
 # GlyphMark
+
+<!-- The GitHub badges resolve as soon as this repository is published at this path; the static
+     badges work already. Keep the OWNER path identical to .github/settings.yml. -->
+<p align="center">
+  <a href="https://github.com/OWNER/glyphmark/actions/workflows/ci.yml"><img src="https://github.com/OWNER/glyphmark/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/OWNER/glyphmark/actions/workflows/codeql.yml"><img src="https://github.com/OWNER/glyphmark/actions/workflows/codeql.yml/badge.svg" alt="CodeQL"></a>
+  <a href="https://securityscorecards.dev/viewer/?uri=github.com/OWNER/glyphmark"><img src="https://api.securityscorecards.dev/projects/github.com/OWNER/glyphmark/badge" alt="OpenSSF Scorecard"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/licence-MIT-blue" alt="MIT licence"></a>
+  <img src="https://img.shields.io/badge/python-3.10%20%C2%B7%203.11%20%C2%B7%203.12%20%C2%B7%203.13-informational" alt="Python 3.10-3.13">
+</p>
 
 Text watermarking / steganography across the ASCII–Unicode divide — **one engine, two
 identical interfaces**:
@@ -37,6 +51,8 @@ uv run glyphmark verify    # round-trip self test of every channel
 ```
 
 Without `uv`: `python -m venv .venv && . .venv/bin/activate && pip install -e '.[dev]'`.
+`make bootstrap` does the whole setup (Python extras + the dev-only jsdom dependency); `make help`
+lists every task CI runs. A devcontainer is in `.devcontainer/`.
 
 Extras: `dev` (pytest, ruff) and `docs` (mkdocs + mkdocs-material, used by `glyphmark docs build`).
 
@@ -52,8 +68,9 @@ uv run glyphmark docs status         # where they live, whether they are built
 uv run glyphmark docs check          # strict build in a temp dir: broken links fail (CI)
 ```
 
-Nine pages: overview, quickstart, CLI reference, web UI guide, channel catalogue, defence playbook,
-HTTP API, reference (frame format, keyed mode, limits) and responsible use. The build is static and
+Twelve pages: overview, quickstart, CLI reference, web UI guide, channel catalogue, defence
+playbook, HTTP API, reference (frame format, keyed mode, limits), security model, responsible use,
+contributing, and community & governance. The build is static and
 same-origin only — `/docs/` fetches nothing remote, and `tests/test_docs.py` asserts the pages agree
 with the code (documented commands, flags, exit codes, channel numbers, sanitizer stages, detection
 kinds and JSON field names all come from the registry itself).
@@ -211,6 +228,32 @@ default pipeline, which is exactly that plus the rest.
 * Marks break exact matching, search, dedup, and case folding — the same property that makes
   homograph phishing work. That is why detection/sanitization ships in the same binary.
 
+## Project operations
+
+Everything a project review asks for is in this repository and is **asserted by tests**
+(`tests/test_repo_hygiene.py` fails if a file goes missing, a required status check stops existing, a
+`CODEOWNERS` path is renamed, or a source file loses its licence header).
+
+| | |
+|---|---|
+| [CONTRIBUTING.md](CONTRIBUTING.md) | setup, the gates CI runs, DCO sign-off, the "add a channel" checklist |
+| [GOVERNANCE.md](GOVERNANCE.md) | roles, voting, vetoes, deadlock-breaking, how maintainers join and leave |
+| [MAINTAINERS.md](MAINTAINERS.md) | who owns what (with affiliations), roles, emeritus, contact routes |
+| [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | the CNCF Code of Conduct, plus rules specific to a dual-use tool |
+| [SECURITY.md](SECURITY.md) | what counts as a vulnerability here, private reporting, 90-day disclosure |
+| [SUPPORT.md](SUPPORT.md) | what help looks like without a support contract — and what is declined |
+| [CHANGELOG.md](CHANGELOG.md) | release notes, with the frame format treated as a stability boundary |
+| [ROADMAP.md](ROADMAP.md) | now / next / later, and what is explicitly not planned |
+| [ADOPTERS.md](ADOPTERS.md) | who runs this (self-listing; a discreet row format is provided) |
+| [TRADEMARKS.md](TRADEMARKS.md) | "works with GlyphMark" yes, "GlyphMark Cloud" no |
+| [LICENSE](LICENSE) · [NOTICE](NOTICE) | MIT, with third-party assets and Unicode data attributed |
+| [.github/](.github/) | workflows (CI, CodeQL, Scorecard, dependency review/audit, release), CODEOWNERS, issue/PR templates, settings as code |
+
+Supply chain: locked dependencies (`uv.lock`), weekly `pip-audit`/`npm audit`, Dependabot, a
+licence/advisory gate on new dependencies, CycloneDX SBOM and SLSA build provenance on every
+release, and signed Scorecard results. Workflow actions are pinned by release tag and kept current
+by Dependabot; SHA pinning is recorded in the roadmap.
+
 ## Layout
 
 ```
@@ -225,9 +268,15 @@ src/glyphmark/
   web/app.py    Flask factory: UI + /api/* + /docs/, calling codec/analysis/sanitize directly
   web/templates/index.html, web/static/{styles.css,app.js}
   docs.py       locate/build/status for the documentation, served by web/app.py under /docs/
-docs/           markdown usage docs   ·  mkdocs.yml  MkDocs Material config
-tests/          round-trip, tamper, detection, sanitizer, CLI and Flask API tests
-tools/ui_smoke.mjs  headless DOM walk-through of the UI (jsdom; dev-only npm dependency)
+docs/           12 markdown pages  ·  mkdocs.yml  MkDocs Material config  (build/docs is generated)
+tests/          round-trip, tamper, detection, sanitizer, CLI, Flask API, docs-drift and
+                repository-hygiene tests (205 total)
+tools/          ui_smoke.mjs (headless DOM walk-through, jsdom), check_license_headers.py,
+                check_dco.py
+.github/        workflows, CODEOWNERS, issue/PR templates, settings.yml, codeql config
+logo/           glyphmark.svg (+ mono variant) - see TRADEMARKS.md
+Makefile        every CI task, locally: make check
+.devcontainer/  ready-to-build dev container (python 3.13 + node 22 + uv)
 ```
 
 `codec`/`analysis`/`sanitize` hold all logic; CLI and Flask are thin adapters, which is what keeps
@@ -237,12 +286,16 @@ what `codec` returns, and `tests/test_cli.py` does the same for the shell.
 ## Development
 
 ```bash
-uv run pytest -q          # 184 tests: every channel round-trips, tamper & key checks,
+make check                # what CI runs: lint + verify + lock consistency + tests + strict docs
+
+uv run pytest -q          # 205 tests: every channel round-trips, tamper & key checks,
                           # sanitize-then-detect-must-come-back-clean, CLI + API behaviour,
-                          # UI markup/JS contract tests (ids, field names, ARIA, CDN split)
-                          # and docs tests (strict mkdocs build + docs-vs-code drift guards)
-uv run ruff check src tests
-uv run ruff format src tests
+                          # UI markup/JS contract tests (ids, field names, ARIA, CDN split),
+                          # docs-vs-code drift guards, and repo-hygiene checks (governance files,
+                          # CI contexts, CODEOWNERS paths, SPDX headers, DCO logic)
+uv run ruff check src tests tools
+uv run ruff format --check src tests tools
+python tools/check_license_headers.py     # SPDX header on every source file
 
 # optional: drive the real UI in a headless DOM (jsdom is the only Node dependency)
 uv run glyphmark serve --port 8123 &
@@ -258,4 +311,6 @@ JS expects.
 
 ## Licence
 
-MIT. Built for provenance engineering, stego research and input-hygiene QA.
+MIT — see [LICENSE](LICENSE); third-party assets and Unicode data are attributed in
+[NOTICE](NOTICE), and the name/logo are covered by [TRADEMARKS.md](TRADEMARKS.md). Built for
+provenance engineering, stego research and input-hygiene QA.

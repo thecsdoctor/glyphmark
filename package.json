@@ -10,8 +10,8 @@
     "ui-smoke": "node tools/ui_smoke.mjs"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "The GlyphMark Authors",
+  "license": "MIT",
   "type": "commonjs",
   "devDependencies": {
     "jsdom": "^30.1.1"

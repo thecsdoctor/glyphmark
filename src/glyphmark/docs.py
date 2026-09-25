@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """MkDocs Material documentation, built and served from inside the app.
 
 The layout is the standard MkDocs one: ``mkdocs.yml`` at the project root, Markdown in ``docs/``.
@@ -34,7 +35,7 @@ def config_path() -> Path | None:
     if env:
         candidates.append(Path(env))
     here = Path(__file__).resolve()
-    candidates.append(here.parents[2] / "mkdocs.yml")   # src/glyphmark/docs.py -> repo root
+    candidates.append(here.parents[2] / "mkdocs.yml")  # src/glyphmark/docs.py -> repo root
     candidates.append(Path(__file__).resolve().parent / "mkdocs.yml")
     candidates.append(Path.cwd() / "mkdocs.yml")
     for cand in candidates:
@@ -98,11 +99,16 @@ def _mkdocs_available() -> bool:
 def _run_mkdocs(args: list[str]) -> dict:
     """Run ``python -m mkdocs`` with our config, capturing output for the caller."""
     if not _mkdocs_available():
-        return {"ok": False, "output": "",
-                "error": f"mkdocs is not installed. Install it with:  {_INSTALL_HINT}"}
+        return {
+            "ok": False,
+            "output": "",
+            "error": f"mkdocs is not installed. Install it with:  {_INSTALL_HINT}",
+        }
     proc = subprocess.run(  # noqa: S603
         [sys.executable, "-m", "mkdocs", *args],
-        capture_output=True, text=True, check=False,
+        capture_output=True,
+        text=True,
+        check=False,
     )
     output = (proc.stdout or "") + (proc.stderr or "")
     return {
@@ -121,13 +127,21 @@ def build(out: str | Path | None = None, strict: bool = False, clean: bool = Tru
     """
     cfg = config_path()
     if cfg is None:
-        return {"ok": False, "error": f"no mkdocs.yml found (set {ENV_CONFIG} to point at it)",
-                "output": "", "output_dir": str(build_dir()), "built": False}
+        return {
+            "ok": False,
+            "error": f"no mkdocs.yml found (set {ENV_CONFIG} to point at it)",
+            "output": "",
+            "output_dir": str(build_dir()),
+            "built": False,
+        }
 
     target = Path(out).expanduser().resolve() if out else build_dir()
     target.mkdir(parents=True, exist_ok=True)
-    result = _run_mkdocs(["build", "-f", str(cfg), "-d", str(target)]
-                         + (["--strict"] if strict else []) + (["--clean"] if clean else []))
+    result = _run_mkdocs(
+        ["build", "-f", str(cfg), "-d", str(target)]
+        + (["--strict"] if strict else [])
+        + (["--clean"] if clean else [])
+    )
     result["output_dir"] = str(target)
     result["built"] = is_built(target)
     return result
@@ -140,8 +154,9 @@ def check(strict: bool = True) -> dict:
         cfg = config_path()
         if cfg is None:
             return {"ok": False, "error": "no mkdocs.yml found", "output": "", "output_dir": ""}
-        result = _run_mkdocs(["build", "-f", str(cfg), "-d", str(tmp)]
-                             + (["--strict"] if strict else []))
+        result = _run_mkdocs(
+            ["build", "-f", str(cfg), "-d", str(tmp)] + (["--strict"] if strict else [])
+        )
         result["output_dir"] = str(tmp)
         result["built"] = is_built(tmp)
         return result

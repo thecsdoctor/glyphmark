@@ -8,6 +8,11 @@ build/
 *.egg-info/
 .coverage
 *.marked.txt
+coverage.xml
+.coverage*
+requirements-audit.txt
+requirements.sbom.txt
+release-notes.md
 
 # dev-only UI test dependency
 node_modules/

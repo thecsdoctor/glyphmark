@@ -1,0 +1,16 @@
+# https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/configuring-issue-templates-for-your-repository#configuring-the-template-chooser
+# OWNER is a placeholder until the canonical home is chosen - keep it identical to
+# repository.homepage in .github/settings.yml (tests/test_repo_hygiene.py checks this).
+blank_issues_enabled: true
+contact_links:
+  - name: Documentation
+    url: https://github.com/OWNER/glyphmark/tree/main/docs
+    about: CLI, web UI, channels, defence playbook and API reference (served at /docs/ once built)
+
+  - name: Security vulnerability
+    url: https://github.com/OWNER/glyphmark/security/advisories/new
+    about: Private vulnerability reporting - please do not open a public issue
+
+  - name: Code of conduct report
+    url: https://github.com/OWNER/glyphmark/blob/main/CODE_OF_CONDUCT.md
+    about: How to report, and the CNCF Code of Conduct this project adopts

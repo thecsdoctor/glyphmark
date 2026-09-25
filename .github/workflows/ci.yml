@@ -1,0 +1,186 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  UV_VERSION: "0.12"
+  PYTHONUNBUFFERED: "1"
+
+jobs:
+  test:
+    name: test (${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+        include:
+          # 3.11/3.12 run on the weekly cron branch push only, to keep the queue short.
+          - python-version: "3.10"
+            coverage: "--cov=glyphmark --cov-report=term-missing --cov-report=xml"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: uv.lock
+
+      - name: Install uv
+        run: python -m pip install --disable-pip-version-check "uv==${UV_VERSION}.*"
+
+      - name: Sync dependencies (locked)
+        run: uv sync --frozen --extra dev --extra docs
+
+      - name: Round-trip smoke (all channels)
+        run: uv run glyphmark verify
+
+      - name: Tests
+        run: uv run --with pytest-cov pytest ${{ matrix.coverage }}
+
+      - name: Upload coverage
+        if: matrix.python-version == '3.10'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.python-version }}
+          path: coverage.xml
+          retention-days: 14
+
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install uv
+        run: python -m pip install --disable-pip-version-check "uv==${UV_VERSION}.*"
+      - name: Sync dependencies (locked)
+        run: uv sync --frozen --extra dev --extra docs
+      - name: ruff check
+        run: uv run ruff check src tests tools
+      - name: ruff format --check
+        run: uv run ruff format --check src tests tools
+      - name: JavaScript syntax
+        run: node --check src/glyphmark/web/static/app.js
+      - name: uv.lock is consistent with pyproject.toml
+        run: uv lock --check
+
+  license-headers:
+    name: license-headers
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: SPDX headers on every source file
+        run: python tools/check_license_headers.py
+
+  dco:
+    name: dco
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Every commit is signed off (DCO)
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: python tools/check_dco.py --base "$BASE"
+
+  docs:
+    name: docs
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install uv
+        run: python -m pip install --disable-pip-version-check "uv==${UV_VERSION}.*"
+      - name: Sync dependencies (locked)
+        run: uv sync --frozen --extra dev --extra docs
+      # Strict build: a broken internal link or a warning fails the build.
+      - name: Docs build (strict) + docs/code drift tests
+        run: |
+          uv run glyphmark docs check --strict
+          uv run pytest tests/test_docs.py -q
+      - name: Build for artifact
+        run: uv run glyphmark docs build --strict --clean
+      - uses: actions/upload-artifact@v4
+        with:
+          name: docs
+          path: build/docs
+          retention-days: 14
+
+  ui:
+    name: ui
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install uv
+        run: python -m pip install --disable-pip-version-check "uv==${UV_VERSION}.*"
+      - name: Sync dependencies (locked)
+        run: uv sync --frozen --extra dev --extra docs
+      - name: Install dev-only UI deps
+        run: npm ci
+      - name: Docs must exist for the UI's Docs link
+        run: uv run glyphmark docs build --strict
+      - name: Serve the app
+        run: |
+          uv run glyphmark serve --host 127.0.0.1 --port 8123 &
+          for i in $(seq 1 40); do
+            curl -fsS localhost:8123/healthz >/dev/null && break
+            sleep 1
+          done
+          curl -fsS localhost:8123/healthz
+      - name: Headless DOM tests against the real API
+        env:
+          GM_BASE: http://127.0.0.1:8123
+        run: npm run ui-smoke
+
+  # Guard the repo's own CNCF-readiness contract (required files, CODEOWNERS/MAINTAINERS sync,
+  # docs-vs-code drift). Runs as part of the suite; split out so its failure is legible.
+  repo-hygiene:
+    name: repo-hygiene
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install uv
+        run: python -m pip install --disable-pip-version-check "uv==${UV_VERSION}.*"
+      - run: uv sync --frozen --extra dev --extra docs
+      - run: uv run pytest tests/test_repo_hygiene.py -q

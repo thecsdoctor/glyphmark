@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Frame layout, checksums and keyed obfuscation.
 
 Wire format (all big-endian)::
@@ -27,15 +28,15 @@ import hashlib
 import struct
 import zlib
 
-MAGIC = 0x57          # 'W'
+MAGIC = 0x57  # 'W'
 VERSION = 1
 FLAG_KEYED = 0x01
 
 HEADER_FMT = ">BBBBH"
-HEADER_SIZE = struct.calcsize(HEADER_FMT)      # 6
+HEADER_SIZE = struct.calcsize(HEADER_FMT)  # 6
 CRC_SIZE = 4
-HEADER_PHASE_BYTES = HEADER_SIZE + CRC_SIZE    # 10
-HEADER_PHASE_BITS = HEADER_PHASE_BYTES * 8     # 80
+HEADER_PHASE_BYTES = HEADER_SIZE + CRC_SIZE  # 10
+HEADER_PHASE_BITS = HEADER_PHASE_BYTES * 8  # 80
 # magic + version stay in clear text so a scanner can prove a frame is present
 # (and that it is keyed) without the secret.
 CLEAR_PREFIX = 2
@@ -84,9 +85,7 @@ def header_bytes(payload_len: int, scheme_index: int, keyed: bool) -> bytes:
 def parse_header(raw: bytes) -> dict:
     if len(raw) < HEADER_SIZE:
         raise FrameError("truncated header")
-    magic, version, scheme_index, flags, payload_len = struct.unpack(
-        HEADER_FMT, raw[:HEADER_SIZE]
-    )
+    magic, version, scheme_index, flags, payload_len = struct.unpack(HEADER_FMT, raw[:HEADER_SIZE])
     if magic != MAGIC:
         raise BadMagicError()
     if version != VERSION:
@@ -112,6 +111,7 @@ def check_crc(data: bytes, trailer: bytes) -> bool:
 # --------------------------------------------------------------------------- #
 # Keyed keystream
 # --------------------------------------------------------------------------- #
+
 
 def root_key(secret: str) -> bytes:
     return hashlib.sha256(b"glyphmark/v1|" + secret.encode("utf-8")).digest()

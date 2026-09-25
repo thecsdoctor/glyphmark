@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Bit packing helpers.
 
 All watermark symbols use radixes that are exact powers of two, so a symbol is a

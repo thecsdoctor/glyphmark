@@ -44,12 +44,15 @@ tampered or wrongly keyed mark fails loudly instead of returning garbage.
 * [Detection & sanitization](defence.md) — the defensive playbook, including a CI gate.
 * [HTTP API](api.md) — `POST /api/*` shapes and the CLI exit codes they carry.
 * [Reference](reference.md) — frame format, keyed mode, limits.
+* [Security model](security.md) — what marks do and do not protect, and how to run the API safely.
 * [Responsible use](ethics.md) — disclosure, privacy and the limits of character-level marks.
+* [Contributing](contributing.md) — environment, gates, the DCO, and the checklist for a new channel.
+* [Community & governance](community.md) — how decisions are made and who is responsible.
 
 ## Install
 
 ```bash
-git clone <this repo> && cd glyphmark
+git clone https://github.com/OWNER/glyphmark && cd glyphmark
 uv sync --extra dev          # runtime deps + pytest/ruff
 uv run glyphmark --help
 ```

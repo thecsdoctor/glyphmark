@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """The documentation must build, must be served by the app, and must not drift from the code."""
 
 from __future__ import annotations
@@ -17,8 +18,20 @@ from glyphmark.web import create_app
 
 ROOT = Path(__file__).resolve().parent.parent
 DOCS_SRC = ROOT / "docs"
-PAGES = ["index.md", "quickstart.md", "cli.md", "ui.md", "channels.md",
-         "defence.md", "api.md", "reference.md", "ethics.md"]
+PAGES = [
+    "index.md",
+    "quickstart.md",
+    "cli.md",
+    "ui.md",
+    "channels.md",
+    "defence.md",
+    "api.md",
+    "reference.md",
+    "security.md",
+    "ethics.md",
+    "contributing.md",
+    "community.md",
+]
 
 
 def _mkdocs_importable() -> bool:
@@ -80,7 +93,7 @@ def test_missing_docs_page_tells_you_the_command(docs_env, client) -> None:
     assert resp.status_code == 200
     body = resp.data.decode()
     assert "glyphmark docs build" in body
-    assert docs_env.name in body                  # tells you where it looked
+    assert docs_env.name in body  # tells you where it looked
     assert "not built" in body.lower()
 
 
@@ -106,10 +119,10 @@ def test_docs_csp_is_scoped_to_the_docs_prefix(docs_env, client) -> None:
     docs_csp = client.get("/docs/").headers["Content-Security-Policy"]
     lab_csp = client.get("/").headers["Content-Security-Policy"]
     script_src = docs_csp.split("script-src")[1].split(";")[0]
-    assert "'unsafe-inline'" in script_src          # Material's inline bootstrap
-    assert "cdn.jsdelivr.net" not in docs_csp       # docs load nothing remote
+    assert "'unsafe-inline'" in script_src  # Material's inline bootstrap
+    assert "cdn.jsdelivr.net" not in docs_csp  # docs load nothing remote
     assert "connect-src 'self'" in docs_csp
-    assert "https://cdn.jsdelivr.net" in lab_csp    # the lab keeps its own policy
+    assert "https://cdn.jsdelivr.net" in lab_csp  # the lab keeps its own policy
 
 
 def test_health_and_meta_advertise_the_docs(docs_env, client) -> None:
@@ -123,7 +136,7 @@ def test_health_and_meta_advertise_the_docs(docs_env, client) -> None:
 def test_lab_ui_links_to_the_docs(client) -> None:
     page = client.get("/").data.decode()
     assert 'href="/docs/"' in page
-    assert "docs" in client.get("/static/app.js").data.decode()      # cheat sheet mentions it
+    assert "docs" in client.get("/static/app.js").data.decode()  # cheat sheet mentions it
 
 
 # ----------------------------------------------------- docs must not lie (CLI)
@@ -132,7 +145,7 @@ def test_nav_in_mkdocs_yml_matches_the_markdown_files() -> None:
     nav_targets = set(re.findall(r":\s+([a-z_]+\.md)\s*$", config, re.M))
     assert nav_targets == {p for p in PAGES}, f"nav/markdown mismatch: {nav_targets ^ set(PAGES)}"
     assert "docs_dir: docs" in config
-    assert "use_directory_urls: false" in config   # required for /docs/<page>.html serving
+    assert "use_directory_urls: false" in config  # required for /docs/<page>.html serving
 
 
 def test_every_command_named_in_the_docs_exists() -> None:
@@ -171,8 +184,12 @@ def test_documented_exit_codes_match_the_core() -> None:
     assert CapacityError.exit_code == 5
 
     table = _page("cli.md").split("## Exit codes")[1]
-    for code, meaning in [("3", "no payload"), ("4", "wrong key"),
-                          ("5", "carrier too small"), ("6", "risk threshold")]:
+    for code, meaning in [
+        ("3", "no payload"),
+        ("4", "wrong key"),
+        ("5", "carrier too small"),
+        ("6", "risk threshold"),
+    ]:
         assert f"| `{code}` |" in table, code
         assert meaning in table, meaning
 
@@ -181,8 +198,9 @@ def test_documented_exit_codes_match_the_core() -> None:
 def test_channel_table_matches_the_registry() -> None:
     page = _page("channels.md")
     for scheme in SCHEMES:
-        row = next((line for line in page.splitlines()
-                    if line.startswith(f"| `{scheme.id}` |")), None)
+        row = next(
+            (line for line in page.splitlines() if line.startswith(f"| `{scheme.id}` |")), None
+        )
         assert row, f"{scheme.id} is missing from the channel table"
         cells = [c.strip() for c in row.strip("|").split("|")]
         assert cells[1] == scheme.family, scheme.id
@@ -199,7 +217,10 @@ def test_documented_stages_are_the_real_stages() -> None:
     page = _page("defence.md")
     for stage in stage_docs():
         assert stage["id"] in page, f"{stage['id']} undocumented"
-        assert stage["label"].lower() in page.lower() or stage["description"][:24].lower() in page.lower()
+        assert (
+            stage["label"].lower() in page.lower()
+            or stage["description"][:24].lower() in page.lower()
+        )
     for killer in {k for stage in stage_docs() for k in stage["kills"]}:
         assert killer in page
 
@@ -215,51 +236,116 @@ def test_documented_findings_kinds_are_real() -> None:
 def test_documented_endpoints_are_routed(client) -> None:
     rules = {rule.rule for rule in client.application.url_map.iter_rules()}
     documented = set(re.findall(r"`(/api/[a-z]+|/healthz|/docs/|/)`", _page("api.md")))
-    assert documented >= {"/api/encode", "/api/decode", "/api/detect",
-                          "/api/sanitize", "/api/inspect", "/api/verify", "/healthz"}
+    assert documented >= {
+        "/api/encode",
+        "/api/decode",
+        "/api/detect",
+        "/api/sanitize",
+        "/api/inspect",
+        "/api/verify",
+        "/healthz",
+    }
     assert documented <= rules, f"documented but not routed: {sorted(documented - rules)}"
 
 
 def test_documented_json_fields_are_returned(docs_env, client) -> None:
     """The API tables list response keys; if the core renames one, this fails."""
-    encode = client.post("/api/encode", json={
-        "cover": "Plain carrier text for a watermark, long enough to carry bytes.",
-        "payload": "id=42", "scheme": "tags"}).get_json()
-    for key in ("scheme", "placement", "keyed", "verified", "text", "payload_len", "units_used",
-                "bits_used", "carrier_units", "capacity_bytes", "cover_len", "utilization"):
+    encode = client.post(
+        "/api/encode",
+        json={
+            "cover": "Plain carrier text for a watermark, long enough to carry bytes.",
+            "payload": "id=42",
+            "scheme": "tags",
+        },
+    ).get_json()
+    for key in (
+        "scheme",
+        "placement",
+        "keyed",
+        "verified",
+        "text",
+        "payload_len",
+        "units_used",
+        "bits_used",
+        "carrier_units",
+        "capacity_bytes",
+        "cover_len",
+        "utilization",
+    ):
         assert key in encode, key
 
     decode = client.post("/api/decode", json={"text": encode["text"]}).get_json()
-    for key in ("scheme", "keyed", "payload_text", "payload_base64", "payload_hex", "payload_len",
-                "units_used", "bits_read", "carrier_units", "attempts"):
+    for key in (
+        "scheme",
+        "keyed",
+        "payload_text",
+        "payload_base64",
+        "payload_hex",
+        "payload_len",
+        "units_used",
+        "bits_read",
+        "carrier_units",
+        "attempts",
+    ):
         assert key in decode, key
 
     clean = client.post("/api/sanitize", json={"text": encode["text"]}).get_json()
-    for key in ("text", "identical", "removed_total", "codepoints_before", "codepoints_after",
-                "channels_targeted", "stages"):
+    for key in (
+        "text",
+        "identical",
+        "removed_total",
+        "codepoints_before",
+        "codepoints_after",
+        "channels_targeted",
+        "stages",
+    ):
         assert key in clean, key
 
     report = client.post("/api/detect", json={"text": encode["text"]}).get_json()
-    for key in ("risk_score", "verdict", "findings", "frame_signatures", "tag_block_mirror",
-                "nfkc_equal", "recommendation", "suspect_total"):
+    for key in (
+        "risk_score",
+        "verdict",
+        "findings",
+        "frame_signatures",
+        "tag_block_mirror",
+        "nfkc_equal",
+        "recommendation",
+        "suspect_total",
+    ):
         assert key in report, key
 
-    rows = client.post("/api/inspect",
-                       json={"text": encode["text"], "only_suspect": True}).get_json()
-    for key in ("codepoints", "utf8_bytes", "utf16_units", "suspect_count", "visible_guess",
-                "truncated", "rows"):
+    rows = client.post(
+        "/api/inspect", json={"text": encode["text"], "only_suspect": True}
+    ).get_json()
+    for key in (
+        "codepoints",
+        "utf8_bytes",
+        "utf16_units",
+        "suspect_count",
+        "visible_guess",
+        "truncated",
+        "rows",
+    ):
         assert key in rows, key
 
     # the docs quote these names, so they may not silently disappear
     page = _page("api.md")
-    for key in ("payload_text", "payload_hex", "payload_base64", "removed_total",
-                "frame_signatures", "tag_block_mirror", "risk_score"):
+    for key in (
+        "payload_text",
+        "payload_hex",
+        "payload_base64",
+        "removed_total",
+        "frame_signatures",
+        "tag_block_mirror",
+        "risk_score",
+    ):
         assert key in page, key
 
 
 # ------------------------------------------------------------------ building
-@pytest.mark.skipif(not _mkdocs_importable(),
-                    reason="docs extra not installed (uv sync --extra docs)")
+@pytest.mark.skipif(
+    not _mkdocs_importable(), reason="docs extra not installed (uv sync --extra docs)"
+)
 def test_docs_build_strictly_and_cleanly(tmp_path) -> None:
     out = tmp_path / "site"
     result = docs_mod.build(out=out, strict=True, clean=True)
@@ -286,18 +372,31 @@ def test_cli_docs_status_says_not_built(docs_env) -> None:
 
 
 def test_cli_docs_build_reports_failure(monkeypatch, docs_env) -> None:
-    monkeypatch.setattr(docs_mod, "_run_mkdocs", lambda args: {
-        "ok": False, "output": "INFO - building\nERROR - bogus config value",
-        "error": "mkdocs exited 1"})
+    monkeypatch.setattr(
+        docs_mod,
+        "_run_mkdocs",
+        lambda args: {
+            "ok": False,
+            "output": "INFO - building\nERROR - bogus config value",
+            "error": "mkdocs exited 1",
+        },
+    )
     result = CliRunner().invoke(main, ["docs", "build"])
     assert result.exit_code == 1
     assert "mkdocs exited 1" in result.output
 
 
 def test_cli_docs_check_failure_is_actionable(monkeypatch, docs_env) -> None:
-    monkeypatch.setattr(docs_mod, "check", lambda strict=True: {
-        "ok": False, "output": "WARNING - broken link: cli.md",
-        "error": "mkdocs exited 1", "output_dir": "/tmp/x"})
+    monkeypatch.setattr(
+        docs_mod,
+        "check",
+        lambda strict=True: {
+            "ok": False,
+            "output": "WARNING - broken link: cli.md",
+            "error": "mkdocs exited 1",
+            "output_dir": "/tmp/x",
+        },
+    )
     result = CliRunner().invoke(main, ["docs", "check"])
     assert result.exit_code == 1
     assert "broken link" in result.output

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Round-trip guarantees for every watermark channel."""
 
 from __future__ import annotations
@@ -28,7 +29,7 @@ def cover_for(scheme_id: str, payload_len: int = len(PAYLOAD)) -> str:
 def test_roundtrip_unkeyed(scheme_id: str) -> None:
     enc = encode(cover_for(scheme_id), PAYLOAD, scheme_id)
     assert enc.verified
-    out = decode(enc.text)                      # auto channel sweep
+    out = decode(enc.text)  # auto channel sweep
     assert out.payload == PAYLOAD
     assert out.scheme_id == scheme_id
 

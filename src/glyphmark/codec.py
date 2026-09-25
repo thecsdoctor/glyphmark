@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """High level encode / extract API — the single source of truth for CLI and web."""
 
 from __future__ import annotations
@@ -77,7 +78,9 @@ class DecodeResult:
         return self.payload.decode("utf-8", errors="replace")
 
     def to_dict(self) -> dict:
-        printable = self.payload.decode("utf-8", errors="strict") if _is_utf8(self.payload) else None
+        printable = (
+            self.payload.decode("utf-8", errors="strict") if _is_utf8(self.payload) else None
+        )
         return {
             "payload_text": printable,
             "payload_hex": self.payload.hex(),
@@ -113,6 +116,7 @@ def _seed(key: str | None) -> str:
 # --------------------------------------------------------------------------- #
 # Insertion family
 # --------------------------------------------------------------------------- #
+
 
 def _insert_positions(text: str, scheme: Scheme, count: int, placement: str) -> list[int]:
     """Return the carrier index each symbol should be glued after (>= 0 = after char i).
@@ -164,6 +168,7 @@ def _extract_symbols(text: str, scheme: Scheme) -> list[int]:
 # Public API
 # --------------------------------------------------------------------------- #
 
+
 def encode(
     cover: str,
     payload: bytes,
@@ -212,12 +217,18 @@ def _encode_insert(scheme, cover, payload, header, key, keyed, placement) -> Enc
     carrier = len(scheme.slots(cover))
     bits = len(digits) * scheme.bits_per_unit
     return EncodeResult(
-        text=text, scheme_id=scheme.id, payload_len=len(payload), bits_used=bits,
-        units_used=len(digits), carrier_units=carrier,
+        text=text,
+        scheme_id=scheme.id,
+        payload_len=len(payload),
+        bits_used=bits,
+        units_used=len(digits),
+        carrier_units=carrier,
         capacity_bytes=scheme.capacity_payload_bytes(
             cover, frames.HEADER_SIZE * 8, frames.CRC_SIZE * 8
         ),
-        placement=placement, keyed=keyed, cover_len=len(cover),
+        placement=placement,
+        keyed=keyed,
+        cover_len=len(cover),
     )
 
 
@@ -226,8 +237,7 @@ def _encode_substitute(scheme, cover, payload, header, key, keyed) -> EncodeResu
     total = len(carriers)
     if total == 0:
         raise CapacityError(
-            f"cover text has no carrier character for scheme '{scheme.id}' "
-            f"({scheme.carrier})"
+            f"cover text has no carrier character for scheme '{scheme.id}' ({scheme.carrier})"
         )
     seed = _seed(key)
 
@@ -248,25 +258,33 @@ def _encode_substitute(scheme, cover, payload, header, key, keyed) -> EncodeResu
 
     # phase B: payload + CRC, at the remaining spread positions
     body = payload + frames.crc32(payload)
-    digits_b = to_symbols(frames.apply_keystream(body, key if keyed else None, "B"),
-                          scheme.bits_per_unit)
+    digits_b = to_symbols(
+        frames.apply_keystream(body, key if keyed else None, "B"), scheme.bits_per_unit
+    )
     pos_b = select_positions(total, len(digits_b), seed, exclude=set(pos_a))
     text = scheme.write_symbols(text, [carriers[p] for p in pos_b], digits_b)
 
     units = len(digits_a) + len(digits_b)
     return EncodeResult(
-        text=text, scheme_id=scheme.id, payload_len=len(payload),
-        bits_used=units * scheme.bits_per_unit, units_used=units, carrier_units=total,
+        text=text,
+        scheme_id=scheme.id,
+        payload_len=len(payload),
+        bits_used=units * scheme.bits_per_unit,
+        units_used=units,
+        carrier_units=total,
         capacity_bytes=scheme.capacity_payload_bytes(
             cover, frames.HEADER_PHASE_BITS, frames.CRC_SIZE * 8
         ),
-        placement="spread(keyed)", keyed=keyed, cover_len=len(cover),
+        placement="spread(keyed)",
+        keyed=keyed,
+        cover_len=len(cover),
     )
 
 
 # --------------------------------------------------------------------------- #
 # Decoding
 # --------------------------------------------------------------------------- #
+
 
 def decode(text: str, key: str | None = None, scheme_id: str = "auto") -> DecodeResult:
     if scheme_id != "auto":
@@ -314,9 +332,9 @@ def _frame_from(raw: bytes, key: str | None, label: str) -> tuple[dict, bytes]:
             if len(blob) < total:
                 raise frames.ChecksumError()
             body = blob[: frames.HEADER_SIZE + info["payload_len"]]
-            if not frames.check_crc(body, blob[frames.HEADER_SIZE + info["payload_len"]:]):
+            if not frames.check_crc(body, blob[frames.HEADER_SIZE + info["payload_len"] :]):
                 raise frames.ChecksumError()
-            return info, blob[frames.HEADER_SIZE: frames.HEADER_SIZE + info["payload_len"]]
+            return info, blob[frames.HEADER_SIZE : frames.HEADER_SIZE + info["payload_len"]]
         except frames.FrameError as exc:
             last = exc
     raise last
@@ -335,8 +353,11 @@ def _decode_insert(text: str, scheme: Scheme, key: str | None, auto: bool) -> De
     info, payload = _frame_from(raw, key, "F")
     _check_index(info, scheme, auto)
     return DecodeResult(
-        payload=payload, scheme_id=scheme.id, keyed=key is not None,
-        bits_read=len(digits) * scheme.bits_per_unit, units_used=len(digits),
+        payload=payload,
+        scheme_id=scheme.id,
+        keyed=key is not None,
+        bits_read=len(digits) * scheme.bits_per_unit,
+        units_used=len(digits),
         carrier_units=carrier,
     )
 
@@ -353,23 +374,28 @@ def _decode_substitute(text: str, scheme: Scheme, key: str | None, auto: bool) -
     seed = _seed(key)
 
     pos_a = select_positions(total, need_a, seed)
-    raw_a = digits_to_bytes(scheme.read_symbols(text, [carriers[p] for p in pos_a]),
-                            scheme.bits_per_unit)
+    raw_a = digits_to_bytes(
+        scheme.read_symbols(text, [carriers[p] for p in pos_a]), scheme.bits_per_unit
+    )
     info, _ = _parse_phase_a(raw_a, key)
     _check_index(info, scheme, auto)
 
     need_b = scheme.digits_for_bytes(info["payload_len"] + frames.CRC_SIZE)
     pos_b = select_positions(total, need_b, seed, exclude=set(pos_a))
-    raw_b = digits_to_bytes(scheme.read_symbols(text, [carriers[p] for p in pos_b]),
-                            scheme.bits_per_unit)
+    raw_b = digits_to_bytes(
+        scheme.read_symbols(text, [carriers[p] for p in pos_b]), scheme.bits_per_unit
+    )
     stream = frames.apply_keystream(raw_b, key, "B") if key else raw_b
-    payload = stream[:info["payload_len"]]
-    if not frames.check_crc(payload, stream[info["payload_len"]:]):
+    payload = stream[: info["payload_len"]]
+    if not frames.check_crc(payload, stream[info["payload_len"] :]):
         raise frames.ChecksumError()
     return DecodeResult(
-        payload=payload, scheme_id=scheme.id, keyed=key is not None,
+        payload=payload,
+        scheme_id=scheme.id,
+        keyed=key is not None,
         bits_read=(need_a + need_b) * scheme.bits_per_unit,
-        units_used=need_a + len(pos_b), carrier_units=total,
+        units_used=need_a + len(pos_b),
+        carrier_units=total,
     )
 
 
@@ -380,7 +406,7 @@ def _parse_phase_a(raw: bytes, key: str | None) -> tuple[dict, bytes]:
             info = frames.parse_header(blob)
             if info["keyed"] and not key:
                 raise frames.KeyRequiredError(info["payload_len"])
-            if not frames.check_crc(blob[:frames.HEADER_SIZE], blob[frames.HEADER_SIZE:]):
+            if not frames.check_crc(blob[: frames.HEADER_SIZE], blob[frames.HEADER_SIZE :]):
                 raise frames.ChecksumError()
             return info, blob
         except frames.FrameError as exc:
@@ -403,32 +429,42 @@ def roundtrip_ok(scheme_id: str, key: str | None = None) -> dict:
         dec = decode(enc.text, key=key, scheme_id=scheme_id)
         ok = dec.payload == payload
         return {
-            "scheme": scheme_id, "ok": ok, "bits_used": enc.bits_used,
-            "carrier_units": enc.carrier_units, "capacity_bytes": enc.capacity_bytes,
-            "cover_len": len(cover), "error": None if ok else "payload mismatch",
+            "scheme": scheme_id,
+            "ok": ok,
+            "bits_used": enc.bits_used,
+            "carrier_units": enc.carrier_units,
+            "capacity_bytes": enc.capacity_bytes,
+            "cover_len": len(cover),
+            "error": None if ok else "payload mismatch",
         }
     except (GlyphMarkError, frames.FrameError) as exc:
         return {
-            "scheme": scheme_id, "ok": False, "bits_used": 0, "carrier_units": 0,
-            "capacity_bytes": 0, "cover_len": len(cover),
+            "scheme": scheme_id,
+            "ok": False,
+            "bits_used": 0,
+            "carrier_units": 0,
+            "capacity_bytes": 0,
+            "cover_len": len(cover),
             "error": f"{type(exc).__name__}: {exc}",
         }
 
 
-_SENTENCE = ("GlyphMark self test the quick brown fox jumps over the lazy dog while "
-             "reviewing unicode provenance channels 0123456789 ")
+_SENTENCE = (
+    "GlyphMark self test the quick brown fox jumps over the lazy dog while "
+    "reviewing unicode provenance channels 0123456789 "
+)
 _PUNCT_SENTENCE = "a-b.c'd*e~f, g-h.i'j*k~l, m-n.o'p*q~r, "
 
 
 def sample_carrier(scheme: Scheme, payload_len: int, max_reps: int = 400) -> str:
     """Build a cover text with enough carrier units for ``payload_len`` bytes."""
     base = _PUNCT_SENTENCE if scheme.id == "punct" else _SENTENCE
-    header_bits = (frames.HEADER_PHASE_BITS if scheme.family == FAMILY_SUBSTITUTE
-                   else frames.HEADER_SIZE * 8)
+    header_bits = (
+        frames.HEADER_PHASE_BITS if scheme.family == FAMILY_SUBSTITUTE else frames.HEADER_SIZE * 8
+    )
     text = base * 4
     for _ in range(max_reps):
         if scheme.capacity_payload_bytes(text, header_bits, frames.CRC_SIZE * 8) >= payload_len:
             return text
         text += base
     return text  # last resort; encode() will raise CapacityError with a clear message
-

@@ -1,0 +1,92 @@
+name: Dependency audit
+
+on:
+  schedule:
+    - cron: "11 5 * * 2"   # Tuesdays, before Dependabot's window
+  push:
+    paths:
+      - uv.lock
+      - pyproject.toml
+      - package-lock.json
+      - .github/workflows/deps-audit.yml
+  pull_request:
+    paths:
+      - uv.lock
+      - pyproject.toml
+      - package-lock.json
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    name: python deps
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install uv
+        run: python -m pip install --disable-pip-version-check "uv==${UV_VERSION:-0.12}.*"
+      - name: Export the locked dependency set
+        run: |
+          uv export --frozen --all-extras --no-emit-project -o requirements-audit.txt
+          echo "runtime + dev + docs deps, from uv.lock:"
+          grep -c '^[a-z]' requirements-audit.txt || true
+      - name: pip-audit (PyPI advisory database)
+        run: |
+          python -m pip install --disable-pip-version-check pip-audit
+          pip-audit --strict -r requirements-audit.txt \
+            --desc on --require-hashes \
+            --skip-editable \
+            --cache-dir ~/.cache/pip-audit || {
+              echo "::error::Advisories found in the locked Python dependency set."
+              echo "    reproduce locally:  uv export --frozen --all-extras --no-emit-project -o /tmp/r.txt && pip-audit -r /tmp/r.txt"
+              exit 1
+            }
+
+  javascript:
+    name: js deps (dev-only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: npm ci
+        run: npm ci
+      # The only Node dependency is jsdom, used in tests; it never ships to users.
+      - name: npm audit
+        run: npm audit --audit-level=high
+
+  supply-chain:
+    name: provenance hygiene
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Lockfile is committed and consistent
+        run: |
+          test -f uv.lock || { echo "::error::uv.lock missing"; exit 1; }
+          python - <<'PY'
+          import pathlib, re, sys
+          toml = pathlib.Path("pyproject.toml").read_text()
+          lock = pathlib.Path("uv.lock").read_text()
+          # Runtime dependencies must be pinned by a lower bound in pyproject and resolved in the lock.
+          reqs = re.findall(r'"([A-Za-z0-9_.\-]+)[^"]*"', toml.split("dependencies = [")[1].split("]")[0])
+          missing = [r for r in reqs if r.lower() not in lock.lower()]
+          if missing:
+              print(f"::error::not present in uv.lock: {missing}")
+              sys.exit(1)
+          print(f"{len(reqs)} runtime dependencies, all resolved in uv.lock")
+          PY
+      - name: No secret-looking values committed
+        run: |
+          ! grep -rInE '(AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----)' \
+            --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=build . \
+            || { echo "::error::Possible secret material in the tree"; exit 1; }

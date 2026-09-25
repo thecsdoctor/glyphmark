@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 /**
  * Headless DOM smoke test for the GlyphMark web UI.
  *   node tools/ui_smoke.mjs                 # expects http://127.0.0.1:8123

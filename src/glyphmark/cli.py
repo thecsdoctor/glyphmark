@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """GlyphMark command line.
 
 Fully non-interactive: every value comes from flags, files or stdin, so the CLI
@@ -49,6 +50,7 @@ EXIT_DETECTION = 6
 # --------------------------------------------------------------------------- #
 # IO helpers
 # --------------------------------------------------------------------------- #
+
 
 def _read(value: str | None, file: str | None, opt: str) -> str:
     """Resolve a text option: inline flag, file path, '-' or piped stdin."""
@@ -134,10 +136,13 @@ def _fail(exc: Exception) -> None:
 # Root
 # --------------------------------------------------------------------------- #
 
+
 @click.group(invoke_without_command=True, context_settings=dict(help_option_names=["-h", "--help"]))
 @click.version_option(__version__, prog_name="glyphmark")
 @click.pass_context
-def main(ctx: click.Context, ) -> None:
+def main(
+    ctx: click.Context,
+) -> None:
     """GlyphMark — text watermarking over ASCII/Unicode channels.
 
     \b
@@ -163,8 +168,15 @@ def cmd_schemes(as_json: bool) -> None:
         "Watermark channels",
         ["id", "family", "bits/unit", "stealth", "survival", "carrier", "detection vector"],
         [
-            [s.id, s.family, str(s.bits_per_unit), _bar(s.stealth), _bar(s.survival),
-             s.carrier, s.detection]
+            [
+                s.id,
+                s.family,
+                str(s.bits_per_unit),
+                _bar(s.stealth),
+                _bar(s.survival),
+                s.carrier,
+                s.detection,
+            ]
             for s in SCHEMES
         ],
     )
@@ -182,15 +194,19 @@ def cmd_scheme(scheme_id: str, as_json: bool) -> None:
         return
     click.secho(f"{scheme.id}  —  {scheme.label}", fg="cyan", bold=True)
     click.echo(scheme.blurb)
-    click.echo(f"\nfamily={scheme.family}  radix={scheme.radix}  "
-               f"bits/unit={scheme.bits_per_unit}  carrier={scheme.carrier}")
+    click.echo(
+        f"\nfamily={scheme.family}  radix={scheme.radix}  "
+        f"bits/unit={scheme.bits_per_unit}  carrier={scheme.carrier}"
+    )
     click.echo(f"stealth={_bar(scheme.stealth)}  survival={_bar(scheme.survival)}")
     click.echo(f"detection: {scheme.detection}")
     click.echo(f"killed by: {', '.join(scheme.killed_by)}")
     for note in scheme.notes:
         click.echo(f"  • {note}")
-    rows = [[r["codepoint"], r["category"], r["utf8"], r["render"], r["name"][:60]]
-            for r in scheme.unit_rows()]
+    rows = [
+        [r["codepoint"], r["category"], r["utf8"], r["render"], r["name"][:60]]
+        for r in scheme.unit_rows()
+    ]
     _table("Characters in use", ["codepoint", "cat", "utf-8", "render", "unicode name"], rows)
 
 
@@ -205,8 +221,10 @@ def cmd_chars(as_json: bool) -> None:
     _table(
         "Character reference",
         ["codepoint", "cat", "utf-8", "render", "used by"],
-        [[r["codepoint"], r["category"], r["utf8"], r["render"], ", ".join(r["schemes"])]
-         for r in rows],
+        [
+            [r["codepoint"], r["category"], r["utf8"], r["render"], ", ".join(r["schemes"])]
+            for r in rows
+        ],
     )
 
 
@@ -215,18 +233,46 @@ def cmd_chars(as_json: bool) -> None:
 @click.option("--cover-file", "cover_file", help="Cover text file, '-' = stdin.")
 @click.option("--payload", "payload_text", help="Payload string to embed.")
 @click.option("--payload-file", "payload_file", help="Payload file, '-' = stdin.")
-@click.option("-s", "--scheme", "scheme", type=click.Choice(scheme_ids()), default="zw-octal",
-              show_default=True, help="Watermark channel.")
+@click.option(
+    "-s",
+    "--scheme",
+    "scheme",
+    type=click.Choice(scheme_ids()),
+    default="zw-octal",
+    show_default=True,
+    help="Watermark channel.",
+)
 @click.option("-k", "--key", "key", help="Binding secret (obfuscation, not crypto).")
-@click.option("-p", "--placement", "placement", type=click.Choice(PLACEMENTS),
-              default="spread", show_default=True)
+@click.option(
+    "-p",
+    "--placement",
+    "placement",
+    type=click.Choice(PLACEMENTS),
+    default="spread",
+    show_default=True,
+)
 @click.option("-o", "--out", "out", help="Output file, '-' = stdout.")
-@click.option("-e", "--emit", "emit", default="raw",
-              type=click.Choice(["raw", "escapes", "json", "codepoints"]), show_default=True)
+@click.option(
+    "-e",
+    "--emit",
+    "emit",
+    default="raw",
+    type=click.Choice(["raw", "escapes", "json", "codepoints"]),
+    show_default=True,
+)
 @click.option("--report", "report", is_flag=True, help="Print report to stderr.")
-def cmd_encode(cover_text: str | None, cover_file: str | None, payload_text: str | None,
-               payload_file: str | None, scheme: str, key: str | None, placement: str,
-               out: str | None, emit: str, report: bool) -> None:
+def cmd_encode(
+    cover_text: str | None,
+    cover_file: str | None,
+    payload_text: str | None,
+    payload_file: str | None,
+    scheme: str,
+    key: str | None,
+    placement: str,
+    out: str | None,
+    emit: str,
+    report: bool,
+) -> None:
     """Embed a payload into cover text."""
     try:
         cover = _read(cover_text, cover_file, "cover")
@@ -249,14 +295,27 @@ def cmd_encode(cover_text: str | None, cover_file: str | None, payload_text: str
 @main.command("decode")
 @click.option("--text", "text", help="Watermarked text.")
 @click.option("--text-file", "text_file", help="Input file, '-' = stdin.")
-@click.option("-s", "--scheme", "scheme", default="auto", show_default=True,
-              help="Channel id, or 'auto' to sweep every channel.")
+@click.option(
+    "-s",
+    "--scheme",
+    "scheme",
+    default="auto",
+    show_default=True,
+    help="Channel id, or 'auto' to sweep every channel.",
+)
 @click.option("-k", "--key", "key", help="Binding secret.")
-@click.option("-f", "--format", "fmt", default="text",
-              type=click.Choice(["text", "hex", "base64", "json"]), show_default=True)
+@click.option(
+    "-f",
+    "--format",
+    "fmt",
+    default="text",
+    type=click.Choice(["text", "hex", "base64", "json"]),
+    show_default=True,
+)
 @click.option("-o", "--out", "out")
-def cmd_decode(text: str | None, text_file: str | None, scheme: str, key: str | None,
-               fmt: str, out: str | None) -> None:
+def cmd_decode(
+    text: str | None, text_file: str | None, scheme: str, key: str | None, fmt: str, out: str | None
+) -> None:
     """Recover a payload (auto-detects the channel)."""
     try:
         body = _read(text, text_file, "text")
@@ -277,7 +336,8 @@ def cmd_decode(text: str | None, text_file: str | None, scheme: str, key: str | 
         _write(result.payload.decode("utf-8", errors="replace"), out)
     click.echo(
         f"[glyphmark] recovered {len(result.payload)}B via '{result.scheme_id}' "
-        f"({result.bits_read} bits read)", err=True,
+        f"({result.bits_read} bits read)",
+        err=True,
     )
 
 
@@ -285,11 +345,21 @@ def cmd_decode(text: str | None, text_file: str | None, scheme: str, key: str | 
 @click.option("--text", "text", help="Text to analyse.")
 @click.option("--text-file", "text_file", help="Input file, '-' = stdin.")
 @click.option("--json", "as_json", is_flag=True)
-@click.option("--fail-on-risk", "fail_on_risk", type=int, default=None,
-              help="Exit 6 when risk score >= N (CI gate).")
+@click.option(
+    "--fail-on-risk",
+    "fail_on_risk",
+    type=int,
+    default=None,
+    help="Exit 6 when risk score >= N (CI gate).",
+)
 @click.option("--no-frames", is_flag=True, help="Skip frame-signature recovery.")
-def cmd_detect(text: str | None, text_file: str | None, as_json: bool,
-               fail_on_risk: int | None, no_frames: bool) -> None:
+def cmd_detect(
+    text: str | None,
+    text_file: str | None,
+    as_json: bool,
+    fail_on_risk: int | None,
+    no_frames: bool,
+) -> None:
     """Analyse text for covert channels (defensive scan)."""
     try:
         body = _read(text, text_file, "text")
@@ -305,12 +375,18 @@ def cmd_detect(text: str | None, text_file: str | None, as_json: bool,
 
 
 def _print_detect(report: dict) -> None:
-    color = {"clean": "green", "minor-anomalies": "yellow", "suspicious": "yellow",
-             "high-risk": "red", "watermark-confirmed": "red"}[report["verdict"]]
+    color = {
+        "clean": "green",
+        "minor-anomalies": "yellow",
+        "suspicious": "yellow",
+        "high-risk": "red",
+        "watermark-confirmed": "red",
+    }[report["verdict"]]
     click.secho(
         f"risk={report['risk_score']}/100  verdict={report['verdict']}  "
         f"suspect_codepoints={report['suspect_total']}  codepoints={report['codepoints']}",
-        fg=color, bold=True,
+        fg=color,
+        bold=True,
     )
     if not report["findings"]:
         click.echo(report["recommendation"])
@@ -319,9 +395,13 @@ def _print_detect(report: dict) -> None:
         "Findings",
         ["severity", "kind", "count", "characters", "remove with"],
         [
-            [f["severity"], f["kind"], str(f["count"]),
-             ", ".join(sorted({c["codepoint"] for c in f.get("characters", [])})) or "—",
-             f.get("remove_with", "—")]
+            [
+                f["severity"],
+                f["kind"],
+                str(f["count"]),
+                ", ".join(sorted({c["codepoint"] for c in f.get("characters", [])})) or "—",
+                f.get("remove_with", "—"),
+            ]
             for f in report["findings"]
         ],
     )
@@ -331,30 +411,54 @@ def _print_detect(report: dict) -> None:
         if f.get("payload_preview"):
             click.secho(f"  recovered payload preview: {f['payload_preview']}", fg="red")
         for tok in (f.get("tokens") or [])[:5]:
-            click.echo(f"  mixed-script token at {tok['offset']}: {tok['text']!r} "
-                       f"scripts={','.join(tok['scripts'])}")
+            click.echo(
+                f"  mixed-script token at {tok['offset']}: {tok['text']!r} "
+                f"scripts={','.join(tok['scripts'])}"
+            )
     if report["tag_block_mirror"]:
-        click.secho(f"\nPlane-14 tag block decodes to: {report['tag_block_mirror'][:200]!r}",
-                    fg="red")
+        click.secho(
+            f"\nPlane-14 tag block decodes to: {report['tag_block_mirror'][:200]!r}", fg="red"
+        )
     click.echo(f"\n{report['recommendation']}")
 
 
 @main.command("sanitize")
 @click.option("--text", "text", help="Text to clean.")
 @click.option("--text-file", "text_file", help="Input file, '-' = stdin.")
-@click.option("--stage", "stages", multiple=True,
-              help="Run only these stages (repeatable). Default pipeline is used otherwise.")
+@click.option(
+    "--stage",
+    "stages",
+    multiple=True,
+    help="Run only these stages (repeatable). Default pipeline is used otherwise.",
+)
 @click.option("--list-stages", is_flag=True, help="Show the sanitizer pipeline and exit.")
-@click.option("-e", "--emit", default="raw",
-              type=click.Choice(["raw", "escapes", "json"]), show_default=True)
+@click.option(
+    "-e", "--emit", default="raw", type=click.Choice(["raw", "escapes", "json"]), show_default=True
+)
 @click.option("-o", "--out")
-def cmd_sanitize(text: str | None, text_file: str | None, stages: tuple[str, ...],
-                 list_stages: bool, emit: str, out: str | None) -> None:
+def cmd_sanitize(
+    text: str | None,
+    text_file: str | None,
+    stages: tuple[str, ...],
+    list_stages: bool,
+    emit: str,
+    out: str | None,
+) -> None:
     """Strip covert-channel code points (intake hygiene / watermark removal)."""
     if list_stages:
-        _table("Sanitizer stages", ["id", "default", "kills", "what it does"],
-               [[s["id"], "yes" if s["default"] else "opt-in", ", ".join(s["kills"]) or "—",
-                 s["description"]] for s in stage_docs()])
+        _table(
+            "Sanitizer stages",
+            ["id", "default", "kills", "what it does"],
+            [
+                [
+                    s["id"],
+                    "yes" if s["default"] else "opt-in",
+                    ", ".join(s["kills"]) or "—",
+                    s["description"],
+                ]
+                for s in stage_docs()
+            ],
+        )
         click.echo(f"\ndefault pipeline: {', '.join(DEFAULT_PIPELINE)}")
         return
     try:
@@ -374,7 +478,8 @@ def cmd_sanitize(text: str | None, text_file: str | None, stages: tuple[str, ...
         click.echo(
             f"[glyphmark] {result['codepoints_before']}→{result['codepoints_after']} "
             f"codepoints, {result['removed_total']} removed/rewritten: "
-            + (", ".join(changed) if changed else "nothing to remove"), err=True,
+            + (", ".join(changed) if changed else "nothing to remove"),
+            err=True,
         )
 
 
@@ -383,20 +488,34 @@ def cmd_sanitize(text: str | None, text_file: str | None, stages: tuple[str, ...
 @click.option("--text-file", "text_file", help="Input file, '-' = stdin.")
 @click.option("--json", "as_json", is_flag=True)
 @click.option("--only-suspect", is_flag=True, help="Show only anomalous code points.")
-def cmd_inspect(text: str | None, text_file: str | None, as_json: bool,
-                only_suspect: bool) -> None:
+def cmd_inspect(text: str | None, text_file: str | None, as_json: bool, only_suspect: bool) -> None:
     """Per-code-point breakdown of a string (what is actually in it)."""
     body = _read(text, text_file, "text")
     if as_json:
         click.echo(json.dumps(inspect_text(body), indent=2, ensure_ascii=False))
         return
     info = inspect_text(body)
-    click.secho(f"{info['codepoints']} codepoints · {info['utf8_bytes']} utf-8 bytes · "
-                f"{info['utf16_units']} utf-16 units · {info['suspect_count']} suspicious")
+    click.secho(
+        f"{info['codepoints']} codepoints · {info['utf8_bytes']} utf-8 bytes · "
+        f"{info['utf16_units']} utf-16 units · {info['suspect_count']} suspicious"
+    )
     rows = [r for r in info["rows"] if not only_suspect or r["suspect"]]
-    _table("Codepoints", ["idx", "codepoint", "cat", "script", "utf-8", "name", "flags"],
-           [[str(r["index"]), r["codepoint"], r["category"], r["script"], r["utf8"],
-             r["name"][:48], ",".join(r["flags"]) or "—"] for r in rows[:400]])
+    _table(
+        "Codepoints",
+        ["idx", "codepoint", "cat", "script", "utf-8", "name", "flags"],
+        [
+            [
+                str(r["index"]),
+                r["codepoint"],
+                r["category"],
+                r["script"],
+                r["utf8"],
+                r["name"][:48],
+                ",".join(r["flags"]) or "—",
+            ]
+            for r in rows[:400]
+        ],
+    )
 
 
 @main.command("verify")
@@ -410,11 +529,21 @@ def cmd_verify(only: tuple[str, ...], key: str | None, as_json: bool) -> None:
     if as_json:
         click.echo(json.dumps(results, indent=2))
     else:
-        _table("Channel self test", ["scheme", "result", "bits", "carrier", "capacity B",
-                                      "detail"],
-               [[r["scheme"], "PASS" if r["ok"] else "FAIL", str(r["bits_used"]),
-                 str(r["carrier_units"]), str(r["capacity_bytes"]), r["error"] or ""]
-                for r in results])
+        _table(
+            "Channel self test",
+            ["scheme", "result", "bits", "carrier", "capacity B", "detail"],
+            [
+                [
+                    r["scheme"],
+                    "PASS" if r["ok"] else "FAIL",
+                    str(r["bits_used"]),
+                    str(r["carrier_units"]),
+                    str(r["capacity_bytes"]),
+                    r["error"] or "",
+                ]
+                for r in results
+            ],
+        )
     if not all(r["ok"] for r in results):
         sys.exit(1)
 
@@ -426,8 +555,12 @@ def cmd_docs() -> None:
 
 @cmd_docs.command("build")
 @click.option("-o", "--out", help="Output directory (default: the one /docs/ serves).")
-@click.option("--strict/--no-strict", default=False, help="Turn warnings and broken links into errors.")
-@click.option("--clean/--no-clean", default=True, help="Drop previous output first (default: clean).")
+@click.option(
+    "--strict/--no-strict", default=False, help="Turn warnings and broken links into errors."
+)
+@click.option(
+    "--clean/--no-clean", default=True, help="Drop previous output first (default: clean)."
+)
 def cmd_docs_build(out: str | None, strict: bool, clean: bool) -> None:
     """Render docs/ with mkdocs-material into a static site."""
     from . import docs as docs_mod

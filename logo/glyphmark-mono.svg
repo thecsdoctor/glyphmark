@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="GlyphMark">
+  <!-- GlyphMark logo, single-colour variant for print/embroidery/monochrome contexts.
+       MIT licence - see LICENSE and NOTICE. Use `fill="currentColor"`-style single colour #0B1220
+       on light backgrounds; invert for dark. -->
+  <g fill="none" stroke="#0b1220" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="40" y="40" width="432" height="432" rx="96" stroke-width="24"/>
+    <path d="M120 96H96a24 24 0 0 0-24 24v24" stroke-width="12"/>
+    <path d="M392 96h24a24 24 0 0 1 24 24v24" stroke-width="12"/>
+    <path d="M120 416H96a24 24 0 0 1-24-24v-24" stroke-width="12"/>
+    <path d="M392 416h24a24 24 0 0 0 24-24v-24" stroke-width="12"/>
+    <rect x="163" y="212" width="54" height="128" rx="18" stroke-width="9" stroke-dasharray="20 16"/>
+    <rect x="297" y="240" width="54" height="100" rx="18" stroke-width="9" stroke-dasharray="20 16"/>
+  </g>
+  <g fill="#0b1220">
+    <rect x="96" y="176" width="52" height="164" rx="16"/>
+    <rect x="230" y="146" width="52" height="194" rx="16"/>
+    <rect x="364" y="206" width="52" height="134" rx="16"/>
+    <rect x="96" y="368" width="320" height="10" rx="5"/>
+  </g>
+</svg>

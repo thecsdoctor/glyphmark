@@ -1,0 +1,51 @@
+{
+  "$schema": "https://raw.githubusercontent.com/devcontainers/spec/main/schemas/devContainer.schema.json",
+  "name": "glyphmark",
+  "image": "mcr.microsoft.com/devcontainers/python:3.13",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "22"
+    }
+  },
+  // uv is installed with pip rather than a third-party feature: one less thing to trust, and the
+  // CI workflow does exactly the same thing, so the environments agree.
+  "postCreateCommand": "python -m pip install --disable-pip-version-check 'uv==0.12.*' && uv sync --extra dev --extra docs && (npm ci || echo 'npm ci failed - UI smoke test unavailable')",
+  "postStartMessage": "GlyphMark ready: make help · make test · make ui (lab on http://127.0.0.1:8123, docs on /docs/)",
+  "forwardPorts": [8123, 8000],
+  "portsAttributes": {
+    "8123": {
+      "label": "GlyphMark lab UI + API",
+      "onAutoForward": "notify"
+    },
+    "8000": {
+      "label": "mkdocs serve (docs authoring only)",
+      "onAutoForward": "ignore"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "charliermarsh.ruff",
+        "ms-python.debugpy",
+        "redhat.vscode-yaml"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "${containerWorkspaceFolder}/.venv/bin/python",
+        "python.testing.pytestEnabled": true,
+        "python.testing.pytestArgs": ["tests"],
+        "[python]": {
+          "editor.defaultFormatter": "charliermarsh.ruff",
+          "editor.formatOnSave": true,
+          "editor.tabSize": 4
+        },
+        "files.insertFinalNewline": true,
+        "files.trimTrailingWhitespace": true
+      }
+    }
+  },
+  "remoteEnv": {
+    "PYTHONUNBUFFERED": "1",
+    "GM_BASE": "http://127.0.0.1:8123"
+  }
+}

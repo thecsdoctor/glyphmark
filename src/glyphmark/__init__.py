@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """GlyphMark — text watermarking over ASCII/Unicode channels.
 
 Every feature is exposed twice: once through the non-interactive CLI

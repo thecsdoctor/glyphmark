@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """The HTTP API must expose exactly what the CLI exposes (same core, same codes)."""
 
 from __future__ import annotations
@@ -33,7 +34,7 @@ def test_index_and_health(client) -> None:
     assert b"GlyphMark" in page.data and b"/static/app.js" in page.data
     assert b'x-data="themeState()"' in page.data
     assert b'data-tab="detect"' in page.data and b'id="panel-reference"' in page.data
-    assert b"cdn.jsdelivr.net" in page.data          # CDN layer is present
+    assert b"cdn.jsdelivr.net" in page.data  # CDN layer is present
     assert b"alpinejs" in page.data and b"tailwindcss" in page.data
     assert client.get("/healthz").get_json()["status"] == "ok"
     assert client.get("/static/app.js").status_code == 200
@@ -52,12 +53,14 @@ def test_meta_exposes_schemes_stages_and_samples(client) -> None:
 
 def test_encode_decode_matches_the_core(client) -> None:
     cover = sample_carrier(get_scheme("tags"), len(PAYLOAD))
-    resp = client.post("/api/encode", json={
-        "cover": cover, "payload": PAYLOAD, "scheme": "tags", "placement": "spread"})
+    resp = client.post(
+        "/api/encode",
+        json={"cover": cover, "payload": PAYLOAD, "scheme": "tags", "placement": "spread"},
+    )
     body = resp.get_json()
     assert resp.status_code == 200
     assert body["verified"] is True
-    assert body["text"] == encode(cover, PAYLOAD.encode(), "tags").text   # CLI parity
+    assert body["text"] == encode(cover, PAYLOAD.encode(), "tags").text  # CLI parity
     decoded = client.post("/api/decode", json={"text": body["text"]}).get_json()
     assert decoded["payload_text"] == PAYLOAD
     assert decoded["scheme"] == "tags" and decoded["payload_base64"]
@@ -65,8 +68,10 @@ def test_encode_decode_matches_the_core(client) -> None:
 
 def test_keyed_roundtrip_over_http(client) -> None:
     cover = sample_carrier(get_scheme("omni16"), len(PAYLOAD))
-    enc = client.post("/api/encode", json={"cover": cover, "payload": PAYLOAD,
-                                          "scheme": "omni16", "key": "s3cret"}).get_json()
+    enc = client.post(
+        "/api/encode",
+        json={"cover": cover, "payload": PAYLOAD, "scheme": "omni16", "key": "s3cret"},
+    ).get_json()
     assert client.post("/api/decode", json={"text": enc["text"]}).status_code == 422
     back = client.post("/api/decode", json={"text": enc["text"], "key": "s3cret"})
     assert back.get_json()["payload_text"] == PAYLOAD
@@ -83,8 +88,9 @@ def test_detect_endpoint(client) -> None:
 def test_sanitize_endpoint_and_stage_selection(client) -> None:
     result = client.post("/api/sanitize", json={"text": marked("zw-octal")}).get_json()
     assert result["removed_total"] > 0 and not result["identical"]
-    narrow = client.post("/api/sanitize", json={"text": "a\u200bb",
-                                                "stages": ["strip_zero_width"]}).get_json()
+    narrow = client.post(
+        "/api/sanitize", json={"text": "a\u200bb", "stages": ["strip_zero_width"]}
+    ).get_json()
     assert [s["id"] for s in narrow["stages"]] == ["strip_zero_width"]
     assert narrow["text"] == "ab"
 
@@ -104,16 +110,18 @@ def test_verify_endpoint(client) -> None:
 
 
 def test_error_mapping_carries_cli_exit_codes(client) -> None:
-    too_big = client.post("/api/encode", json={"cover": "tiny", "payload": "x" * 4000,
-                                              "scheme": "homoglyph"})
+    too_big = client.post(
+        "/api/encode", json={"cover": "tiny", "payload": "x" * 4000, "scheme": "homoglyph"}
+    )
     assert too_big.status_code == 422
     assert too_big.get_json()["exit_code"] == 5
 
     nothing = client.post("/api/decode", json={"text": "nothing here at all"})
     assert nothing.status_code == 422 and nothing.get_json()["exit_code"] == 3
 
-    bad_scheme = client.post("/api/encode", json={"cover": "x", "payload": "y",
-                                                 "scheme": "not-a-scheme"})
+    bad_scheme = client.post(
+        "/api/encode", json={"cover": "x", "payload": "y", "scheme": "not-a-scheme"}
+    )
     assert bad_scheme.status_code == 400
 
     missing = client.post("/api/encode", json={"cover": "x"})
@@ -144,6 +152,7 @@ def test_oversized_body_is_rejected(client) -> None:
 # here: every id the script looks up must exist in the markup, and the response
 # field names the script reads must match what the endpoints actually emit.
 
+
 def _asset(name: str) -> str:
     path = pathlib.Path(__file__).resolve().parent.parent / "src" / "glyphmark" / "web" / name
     return path.read_text(encoding="utf-8")
@@ -153,15 +162,22 @@ def test_every_id_the_script_touches_exists_in_the_markup(client) -> None:
     html = client.get("/").data.decode()
     js = _asset("static/app.js")
     referenced = set(re.findall(r'\$\("([A-Za-z0-9_]+)"\)', js))
-    assert len(referenced) > 20                       # the query is really finding ids
+    assert len(referenced) > 20  # the query is really finding ids
     missing = {i for i in referenced if f'id="{i}"' not in html}
     assert not missing, f"app.js looks up ids that the template does not define: {sorted(missing)}"
 
 
 def test_script_reads_only_fields_the_api_emits(client) -> None:
     js = _asset("static/app.js")
-    for stale in ("cover_text", "risk_level", "text_without_payload", "visible_text",
-                  "state.meta.stages.", "sanitized_text", "x.cp"):
+    for stale in (
+        "cover_text",
+        "risk_level",
+        "text_without_payload",
+        "visible_text",
+        "state.meta.stages.",
+        "sanitized_text",
+        "x.cp",
+    ):
         assert stale not in js, f"app.js still uses the removed field {stale!r}"
     meta = client.get("/api/meta").get_json()
     for key in ("sanitize_stages", "exit_codes", "samples", "placements", "schemes", "characters"):

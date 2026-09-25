@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 /* GlyphMark web UI.
    Framework-free logic + local CSS; Tailwind/Alpine/fonts come from CDN for polish.
    Every action calls the /api/* endpoints, whose shapes mirror the CLI flags. */

@@ -1,0 +1,49 @@
+# Code owners. Syntax: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+#
+# Teams referenced here are created in the organisation and listed in MAINTAINERS.md.
+# Until the org/teams exist, GitHub accepts these entries but resolves review to the
+# repository admins; keep MAINTAINERS.md and this file in sync (tests/test_repo_hygiene.py
+# asserts every maintainer named in MAINTAINERS.md also appears here).
+
+# Everything falls back to the maintainers team, with the listed maintainers (MAINTAINERS.md)
+# as direct owners so review requests still work before the org teams exist.
+*                                       @glyphmark/maintainers @dibrahim
+
+# Core: frame format, bit packing, codec, channel registry.
+# Changes here are compatibility boundaries - see GOVERNANCE.md.
+/src/glyphmark/frames.py                @glyphmark/core
+/src/glyphmark/codec.py                 @glyphmark/core
+/src/glyphmark/bitstreams.py            @glyphmark/core
+/src/glyphmark/schemes.py               @glyphmark/core
+/tests/test_roundtrip.py                @glyphmark/core
+
+# Defence: detection findings and sanitization stages.
+/src/glyphmark/analysis.py              @glyphmark/defence
+/src/glyphmark/sanitize.py              @glyphmark/defence
+/tests/test_detect_sanitize.py          @glyphmark/defence
+
+# Interfaces: CLI, HTTP API, web UI. Both must stay functionally identical.
+/src/glyphmark/cli.py                   @glyphmark/interfaces
+/src/glyphmark/web/                     @glyphmark/interfaces
+/tests/test_cli.py                      @glyphmark/interfaces
+/tests/test_web.py                      @glyphmark/interfaces
+/tools/                                 @glyphmark/interfaces
+
+# Documentation and its build/serving path.
+/docs/                                  @glyphmark/maintainers
+/mkdocs.yml                             @glyphmark/maintainers
+/src/glyphmark/docs.py                  @glyphmark/maintainers
+/tests/test_docs.py                     @glyphmark/maintainers
+
+# Governance and supply chain - governance edits require a formal vote.
+/GOVERNANCE.md                          @glyphmark/maintainers
+/CODE_OF_CONDUCT.md                     @glyphmark/maintainers
+/MAINTAINERS.md                         @glyphmark/maintainers
+/TRADEMARKS.md                          @glyphmark/maintainers
+/LICENSE                                @glyphmark/maintainers
+/NOTICE                                 @glyphmark/maintainers
+/SECURITY.md                            @glyphmark/maintainers
+/.github/                               @glyphmark/maintainers
+/pyproject.toml                         @glyphmark/maintainers
+/uv.lock                                @glyphmark/maintainers
+/package.json                           @glyphmark/maintainers

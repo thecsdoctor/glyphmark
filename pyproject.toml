@@ -4,13 +4,25 @@ version = "0.1.0"
 description = "Text watermarking toolkit over ASCII/Unicode channels: embed, extract, detect, sanitize. Identical functionality from the CLI (non-interactive) and a Flask web UI."
 readme = "README.md"
 license = { text = "MIT" }
+license_files = ["LICENSE", "NOTICE"]
 requires-python = ">=3.10"
-authors = [{ name = "GlyphMark" }]
+authors = [{ name = "The GlyphMark Authors" }]
 keywords = ["steganography", "watermarking", "unicode", "provenance", "detection", "flask"]
 classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
     "Environment :: Web Environment",
     "Framework :: Flask",
     "Intended Audience :: Developers",
+    "Intended Audience :: Information Technology",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Security",
     "Topic :: Text Processing :: Markup",
 ]
@@ -19,6 +31,14 @@ dependencies = [
     "flask>=3.0",
     "rich>=13.7",
 ]
+
+[project.urls]
+Homepage = "https://github.com/OWNER/glyphmark"
+Repository = "https://github.com/OWNER/glyphmark"
+Documentation = "https://github.com/OWNER/glyphmark/tree/main/docs"
+Changelog = "https://github.com/OWNER/glyphmark/blob/main/CHANGELOG.md"
+"Bug Tracker" = "https://github.com/OWNER/glyphmark/issues"
+"Security Policy" = "https://github.com/OWNER/glyphmark/blob/main/SECURITY.md"
 
 [project.scripts]
 glyphmark = "glyphmark.cli:main"
@@ -41,7 +61,17 @@ packages = ["src/glyphmark"]
 # docs sources ship in the sdist so `glyphmark docs build` works from a source install
 [tool.hatch.build.targets.sdist]
 artifacts = ["docs"]
-include = ["src", "docs", "tests", "tools", "README.md", "pyproject.toml"]
+include = [
+    "src",
+    "docs",
+    "tests",
+    "tools",
+    "mkdocs.yml",
+    "Makefile",
+    "README.md",
+    "CHANGELOG.md",
+    "pyproject.toml",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
