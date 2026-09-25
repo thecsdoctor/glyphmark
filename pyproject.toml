@@ -1,0 +1,46 @@
+[project]
+name = "glyphmark"
+version = "0.1.0"
+description = "Text watermarking toolkit over ASCII/Unicode channels: embed, extract, detect, sanitize. Identical functionality from the CLI (non-interactive) and a Flask web UI."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+authors = [{ name = "GlyphMark" }]
+keywords = ["steganography", "watermarking", "unicode", "provenance", "detection", "flask"]
+classifiers = [
+    "Environment :: Web Environment",
+    "Framework :: Flask",
+    "Intended Audience :: Developers",
+    "Topic :: Security",
+    "Topic :: Text Processing :: Markup",
+]
+dependencies = [
+    "click>=8.1",
+    "flask>=3.0",
+    "rich>=13.7",
+]
+
+[project.scripts]
+glyphmark = "glyphmark.cli:main"
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "ruff>=0.6"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/glyphmark"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+src = ["src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501"]
