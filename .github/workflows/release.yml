@@ -74,7 +74,7 @@ jobs:
           python -c "import json,sys;d=json.load(open('dist/glyphmark-${{ steps.meta.outputs.version }}.cdx.json'));print(f\"SBOM: {len(d['components'])} components, spec {d['specVersion']}\")"
 
       - name: Attest build provenance (SLSA via GitHub)
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: dist/*
 
