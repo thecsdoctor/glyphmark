@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Fails a PR that adds a dependency with a known advisory, or one under a licence that
       # conflicts with MIT distribution. Blocks the "just add one more package" supply-chain path.
