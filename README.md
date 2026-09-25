@@ -119,11 +119,31 @@ glyphmark encode --cover-file doc.txt --payload-file provenance.json \
 uv run glyphmark serve --port 8000     # http://127.0.0.1:8000
 ```
 
-Tabs: **Embed · Extract · Detect · Sanitize · Inspect · Reference**. Nice bits: live capacity
-meter, annotated view that renders invisible code points as labelled chips, `\u`-escaped and
-UTF-8-hex views, copy buttons, risk gauge, one-click “sanitize with the recommended stages”,
-per-stage accounting, an in-page `verify` self test, and a **copy-able CLI command printed under
-every result**.
+Six panels: **Embed · Extract · Detect · Sanitize · Inspect · Reference** (`Alt`+`1…6`, or
+`Ctrl/⌘`+`↵` to run whichever panel is open — press `?` in the browser for the full sheet).
+
+What the UI does beyond the raw API:
+
+* **Pipeline ribbon** across the top (`cover → watermarked → detected → sanitized`). Each step is
+  clickable and loads its text into the next panel, so the whole write-it / find-it / kill-it loop
+  happens in one session. State is restored from `localStorage` on reload — binding keys never are.
+* **Channel picker with live capacity**: type to filter (`/`, arrows, `Enter`), see bits per carrier
+  unit and stealth/survival ratings, watch the capacity meter and the “this carrier cannot hold
+  N bytes” warning *before* you submit, and pick from the channels it recommends for the cover and
+  payload you actually have.
+* **Proof, not vibes**, after every action: an annotated view that renders invisible code points as
+  labelled chips, a *what changed* diff (insertion offsets, or the homoglyph swap table with a
+  side-by-side comparison), payload hex / base64 / `\u`-escaped / UTF-8-byte views, and an
+  **automatic re-scan** that confirms the mark survived the embed and reports “no anomaly” after
+  sanitizing.
+* Detection report with risk gauge, verdict, recovered frames, the Plane-14 tag-block mirror,
+  severity filtering, click-to-copy code points, the sanitizer stage that kills each finding, and a
+  JSON download — with the equivalent **CLI command printed under every result**.
+* Reference panel: channel catalogue, every code point any channel touches (click a row to copy the
+  character), the sanitizer pipeline, the CLI cheat sheet, and an in-page `verify` self test.
+* Keyboard-driven and screen-reader sane (skip link, `tablist`/`tabpanel`, labelled inputs, live
+  regions, focus management, `?`/`Esc` help dialog), responsive to phone width, light/dark themed.
+  Logic is framework-free vanilla JS + local CSS, so a blocked CDN degrades instead of breaking.
 
 | endpoint | mirrors |
 |---|---|
@@ -183,24 +203,26 @@ src/glyphmark/
   web/app.py    Flask factory: UI + /api/*, both calling codec/analysis/sanitize directly
   web/templates/index.html, web/static/{styles.css,app.js}
 tests/          round-trip, tamper, detection, sanitizer, CLI and Flask API tests
-tools/ui_smoke.mjs  headless DOM walk-through of the UI (jsdom)
+tools/ui_smoke.mjs  headless DOM walk-through of the UI (jsdom; dev-only npm dependency)
 ```
 
 `codec`/`analysis`/`sanitize` hold all logic; CLI and Flask are thin adapters, which is what keeps
-the two interfaces provably equivalent (see `tests/test_parity.py`).
+the two interfaces provably equivalent — `tests/test_web.py` asserts the HTTP layer returns exactly
+what `codec` returns, and `tests/test_cli.py` does the same for the shell.
 
 ## Development
 
 ```bash
-uv run pytest -q          # 157 tests: every channel round-trips, tamper & key checks,
-                          # sanitize-then-detect-must-come-back-clean, CLI + API behaviour
+uv run pytest -q          # 161 tests: every channel round-trips, tamper & key checks,
+                          # sanitize-then-detect-must-come-back-clean, CLI + API behaviour,
+                          # plus UI markup/JS contract tests (ids, field names, ARIA, CDN split)
 uv run ruff check src tests
 uv run ruff format src tests
 
-# optional: drive the real UI in a headless DOM (embed → scan → sanitize → extract)
-npm --prefix tools install jsdom          # one-off
+# optional: drive the real UI in a headless DOM (jsdom is the only Node dependency)
 uv run glyphmark serve --port 8123 &
-GM_BASE=http://127.0.0.1:8123 node tools/ui_smoke.mjs
+npm install
+npm run ui-smoke            # == node tools/ui_smoke.mjs ; honours GM_BASE=http://host:port
 ```
 
 The page's logic is framework-free vanilla JS (`web/static/app.js`), so the lab still

@@ -6,8 +6,8 @@
 <title>GlyphMark · Unicode text watermarking lab</title>
 <meta name="description" content="Embed, extract, detect and sanitize invisible Unicode and ASCII text watermarks — CLI and web UI on one engine.">
 
-<!-- CDN layer: fonts + Tailwind + Alpine. The page stays functional without them
-     (all logic is vanilla JS, all component styling is local CSS). -->
+<!-- CDN layer: fonts + Tailwind + Alpine. Functional logic is vanilla JS and all
+     component styling is local, so a blocked CDN degrades instead of breaking. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -17,6 +17,7 @@
 </head>
 
 <body data-theme="dark" x-data="themeState()" :data-theme="dark ? 'dark' : 'light'" x-init="sync()">
+<a class="skip" href="#panel-embed">Skip to content</a>
 
 <header class="topbar">
   <div class="brand">
@@ -30,39 +31,47 @@
     <span class="pill" title="Watermark channels available"><strong id="channelCount">13</strong> channels</span>
     <span class="pill ghost" title="Every result shows the equivalent shell command">CLI ⇄ API parity</span>
     <span class="pill ghost">v<span id="versionTag">{{ version }}</span></span>
-    <button class="icon-btn" @click="toggle()" x-text="dark ? '☾' : '☀'" title="Toggle light/dark">☾</button>
+    <button class="icon-btn" data-action="help" title="Help &amp; keyboard shortcuts (?)" aria-label="Help and keyboard shortcuts">?</button>
+    <button class="icon-btn" @click="toggle()" x-text="dark ? '☾' : '☀'" title="Toggle light or dark theme" aria-label="Toggle colour theme">☾</button>
   </div>
 </header>
 
-<nav class="tabs" aria-label="Sections">
-  <button class="tab active" data-tab="embed"><span class="tab-ico">＋</span> Embed</button>
-  <button class="tab" data-tab="extract"><span class="tab-ico">⌕</span> Extract</button>
-  <button class="tab" data-tab="detect"><span class="tab-ico">⚑</span> Detect</button>
-  <button class="tab" data-tab="sanitize"><span class="tab-ico">⌫</span> Sanitize</button>
-  <button class="tab" data-tab="inspect"><span class="tab-ico">▦</span> Inspect</button>
-  <button class="tab" data-tab="reference"><span class="tab-ico">≡</span> Reference</button>
-</nav>
+<div class="tabwrap">
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button class="tab active" role="tab" id="tab-embed" aria-controls="panel-embed" aria-selected="true" data-tab="embed"><span class="tab-ico">＋</span> Embed <span class="kbd-hint">⌥1</span></button>
+    <button class="tab" role="tab" id="tab-extract" aria-controls="panel-extract" aria-selected="false" data-tab="extract"><span class="tab-ico">⌕</span> Extract <span class="kbd-hint">⌥2</span></button>
+    <button class="tab" role="tab" id="tab-detect" aria-controls="panel-detect" aria-selected="false" data-tab="detect"><span class="tab-ico">⚑</span> Detect <span class="kbd-hint">⌥3</span></button>
+    <button class="tab" role="tab" id="tab-sanitize" aria-controls="panel-sanitize" aria-selected="false" data-tab="sanitize"><span class="tab-ico">⌫</span> Sanitize <span class="kbd-hint">⌥4</span></button>
+    <button class="tab" role="tab" id="tab-inspect" aria-controls="panel-inspect" aria-selected="false" data-tab="inspect"><span class="tab-ico">▦</span> Inspect <span class="kbd-hint">⌥5</span></button>
+    <button class="tab" role="tab" id="tab-reference" aria-controls="panel-reference" aria-selected="false" data-tab="reference"><span class="tab-ico">≡</span> Reference <span class="kbd-hint">⌥6</span></button>
+  </nav>
+  <div class="ribbon" id="ribbon" aria-label="Workbench pipeline">
+    <span class="dim">Pipeline: write a mark, prove it is there, then destroy it.</span>
+  </div>
+</div>
 
 <main class="wrap">
 
   <!-- ═══════════════════════════════ EMBED ═══════════════════════════════ -->
-  <section class="grid two panel" id="panel-embed">
+  <section class="grid two panel" id="panel-embed" role="tabpanel" aria-labelledby="tab-embed">
     <div class="stack">
       <div class="card">
         <div class="card-h">
-          <h2>1 · Cover text</h2>
+          <h2><label for="cover">1 · Cover text</label></h2>
           <div class="row-gap">
             <button class="btn tiny ghost" data-action="sample" data-field="cover">Sample</button>
             <button class="btn tiny ghost" data-action="clear" data-field="cover">Clear</button>
           </div>
         </div>
-        <p class="hint">The visible carrier. Longer text = more capacity. Nothing here changes
-          visually — except on substitution channels, which swap look-alike characters.</p>
-        <textarea id="cover" class="ta" spellcheck="false" data-event="capacity"></textarea>
+        <p class="hint" id="cover-hint">The visible carrier. Longer text = more capacity. Nothing changes
+          visually — substitution channels swap in look-alike characters instead of adding invisible ones.</p>
+        <textarea id="cover" class="ta" spellcheck="false" data-event="capacity"
+                  aria-describedby="cover-hint cover-stats"></textarea>
+        <div class="stats" id="cover-stats" aria-live="polite"></div>
       </div>
 
       <div class="card">
-        <div class="card-h"><h2>2 · Payload</h2>
+        <div class="card-h"><h2><label for="payload">2 · Payload</label></h2>
           <div class="row-gap">
             <button class="btn tiny ghost" data-action="sample" data-field="payload">Provenance id</button>
             <button class="btn tiny ghost" data-action="clear" data-field="payload">Clear</button>
@@ -70,25 +79,37 @@
         </div>
         <textarea id="payload" class="ta sm" spellcheck="false" data-event="capacity"
                   placeholder="e.g. model=local-llm session=4F2A-91C7"></textarea>
+        <div class="stats" id="payload-stats" aria-live="polite"></div>
       </div>
 
       <div class="card">
         <div class="card-h"><h2>3 · Channel &amp; key</h2></div>
         <div class="form-grid">
-          <label>Channel
-            <select id="encScheme" data-event="capacity"></select>
-          </label>
-          <label>Placement (insert channels)
+          <div class="picker">
+            <label id="picker-label" for="schemeBtn">Channel</label>
+            <button type="button" class="picker-btn" id="schemeBtn" aria-haspopup="listbox"
+                    aria-expanded="false" aria-labelledby="picker-label schemeBtn">
+              <span class="id" id="pickerId">zw-octal</span>
+              <span class="lbl" id="pickerLbl"></span><span class="caret">▾</span>
+            </button>
+            <div class="picker-pop" id="schemePop" role="listbox" aria-labelledby="picker-label" hidden>
+              <input type="search" id="schemeFilter" class="search" placeholder="filter channels… (/, ←/→, Enter)"
+                     aria-label="Filter channels">
+              <div id="schemeOptions"></div>
+            </div>
+          </div>
+          <label for="placement">Placement (insert channels)
             <select id="placement"></select>
           </label>
-          <label class="span2">Binding key (optional — obfuscation, not crypto)
+          <label class="span2" for="encKey">Binding key — obfuscation, not crypto
             <div class="row-gap">
-              <input id="encKey" type="password" placeholder="shared secret that binds the mark">
-              <button class="btn tiny ghost" data-action="toggle-key">show</button>
+              <input id="encKey" type="password" placeholder="secret that binds the mark to you" autocomplete="off">
+              <button class="btn tiny ghost" data-action="toggle-key" data-target="encKey" aria-pressed="false">show</button>
             </div>
           </label>
         </div>
-        <div id="capBox" class="capacity"></div>
+        <div class="reco" id="reco" aria-live="polite"></div>
+        <div id="capBox" class="capacity" aria-live="polite"></div>
         <button class="btn primary block" data-action="encode">
           <span class="spin" id="spin-encode" hidden></span> Embed watermark <kbd>Ctrl</kbd><kbd>↵</kbd>
         </button>
@@ -96,32 +117,38 @@
     </div>
 
     <div class="stack">
-      <div id="encOut" class="card out empty">
-        <p class="empty-msg">Result appears here. The output looks identical to the cover — press
-          <em>→ scan it</em> afterwards to prove the mark is really there.</p>
+      <div id="encOut" class="card out empty result" role="region" aria-live="polite" aria-label="Embedding result">
+        <p class="empty-msg">Result appears here — with an annotated view that reveals what was
+          written, a <b>what-changed</b> diff against your cover text, an automatic re-scan, and the
+          shell command that reproduces it.</p>
       </div>
     </div>
   </section>
 
   <!-- ═══════════════════════════════ EXTRACT ═════════════════════════════ -->
-  <section class="grid two panel" id="panel-extract" hidden>
+  <section class="grid two panel" id="panel-extract" role="tabpanel" aria-labelledby="tab-extract" hidden>
     <div class="stack">
       <div class="card">
-        <div class="card-h"><h2>Suspect text</h2>
+        <div class="card-h"><h2><label for="decText">Suspect text</label></h2>
           <div class="row-gap">
-            <button class="btn tiny ghost" data-action="paste-last" data-target="extract">Reuse last output</button>
+            <button class="btn tiny ghost" data-action="clipboard" data-target="decText">Paste ⧉</button>
+            <button class="btn tiny ghost" data-action="paste-last" data-target="extract">Last output</button>
             <button class="btn tiny ghost" data-action="clear" data-field="decText">Clear</button>
           </div>
         </div>
-        <p class="hint">Paste the text. The sweep tries every channel and validates a magic byte
-          plus CRC32, so a hit is a positive identification, not a guess.</p>
-        <textarea id="decText" class="ta" spellcheck="false"></textarea>
+        <p class="hint" id="dec-hint">The sweep tries every channel and validates a magic byte plus
+          CRC32, so a hit is a positive identification, not a guess.</p>
+        <textarea id="decText" class="ta" spellcheck="false" aria-describedby="dec-hint dec-stats"></textarea>
+        <div class="stats" id="dec-stats" aria-live="polite"></div>
         <div class="form-grid">
-          <label>Channel
+          <label for="decScheme">Channel
             <select id="decScheme"><option value="auto">auto — sweep all channels</option></select>
           </label>
-          <label>Binding key
-            <input id="decKey" type="password" placeholder="only if the mark was keyed">
+          <label for="decKey">Binding key
+            <div class="row-gap">
+              <input id="decKey" type="password" placeholder="only if the mark was keyed" autocomplete="off">
+              <button class="btn tiny ghost" data-action="toggle-key" data-target="decKey" aria-pressed="false">show</button>
+            </div>
           </label>
         </div>
         <button class="btn primary block" data-action="decode">
@@ -130,46 +157,52 @@
       </div>
     </div>
     <div class="stack">
-      <div id="decOut" class="card out empty"><p class="empty-msg">Recovered payload appears here.</p></div>
+      <div id="decOut" class="card out empty result" role="region" aria-live="polite" aria-label="Extraction result">
+        <p class="empty-msg">Recovered payload appears here, with the channel that matched and the
+          full attempt log when nothing is found.</p></div>
     </div>
   </section>
 
   <!-- ═══════════════════════════════ DETECT ══════════════════════════════ -->
-  <section class="grid two panel" id="panel-detect" hidden>
+  <section class="grid two panel" id="panel-detect" role="tabpanel" aria-labelledby="tab-detect" hidden>
     <div class="stack">
       <div class="card">
-        <div class="card-h"><h2>Scan for covert channels</h2>
+        <div class="card-h"><h2><label for="detText">Scan for covert channels</label></h2>
           <div class="row-gap">
-            <button class="btn tiny ghost" data-action="paste-last" data-target="detect">Reuse last output</button>
+            <button class="btn tiny ghost" data-action="clipboard" data-target="detText">Paste ⧉</button>
+            <button class="btn tiny ghost" data-action="paste-last" data-target="detect">Last output</button>
           </div>
         </div>
-        <p class="hint">Defensive view: invisible code points, homoglyphs, mixed scripts, NFKC
-          drift and recovered frame signatures — each with the sanitizer stage that removes it.</p>
-        <textarea id="detText" class="ta" spellcheck="false"></textarea>
+        <p class="hint">Invisible code points, homoglyphs, mixed scripts, NFKC drift and recovered
+          frame signatures — each with the sanitizer stage that removes it.</p>
+        <textarea id="detText" class="ta" spellcheck="false" aria-describedby="det-stats"></textarea>
+        <div class="stats" id="det-stats" aria-live="polite"></div>
         <button class="btn primary block" data-action="detect">
           <span class="spin" id="spin-detect" hidden></span> Analyse <kbd>Ctrl</kbd><kbd>↵</kbd>
         </button>
       </div>
     </div>
     <div class="stack">
-      <div id="detOut" class="card out empty"><p class="empty-msg">Risk score, findings and a
-        one-click cleanup appear here.</p></div>
+      <div id="detOut" class="card out empty result" role="region" aria-live="polite" aria-label="Detection report">
+        <p class="empty-msg">Risk score, findings and a one-click cleanup appear here.</p></div>
     </div>
   </section>
 
   <!-- ══════════════════════════════ SANITIZE ═════════════════════════════ -->
-  <section class="grid two panel" id="panel-sanitize" hidden>
+  <section class="grid two panel" id="panel-sanitize" role="tabpanel" aria-labelledby="tab-sanitize" hidden>
     <div class="stack">
       <div class="card">
-        <div class="card-h"><h2>Intake sanitizer</h2>
+        <div class="card-h"><h2><label for="sanText">Intake sanitizer</label></h2>
           <div class="row-gap">
-            <button class="btn tiny ghost" data-action="paste-last" data-target="sanitize">Reuse last output</button>
+            <button class="btn tiny ghost" data-action="clipboard" data-target="sanText">Paste ⧉</button>
+            <button class="btn tiny ghost" data-action="paste-last" data-target="sanitize">Last output</button>
           </div>
         </div>
-        <p class="hint">Staged pipeline. Defaults are safe for prose; the two opt-in stages
-          (script allow-list, force ASCII) are aggressive and will damage legitimate text.</p>
-        <textarea id="sanText" class="ta" spellcheck="false"></textarea>
-        <div id="stagePicker" class="stages"></div>
+        <p class="hint">Staged pipeline. Defaults are safe for prose; the two opt-in stages (script
+          allow-list, force ASCII) are aggressive and will damage legitimate text.</p>
+        <textarea id="sanText" class="ta" spellcheck="false" aria-describedby="san-stats"></textarea>
+        <div class="stats" id="san-stats" aria-live="polite"></div>
+        <div id="stagePicker" class="stages" role="group" aria-label="Sanitizer stages"></div>
         <div class="row-gap wrap-row">
           <button class="btn ghost" data-action="stages" data-mode="default">Default pipeline</button>
           <button class="btn ghost" data-action="stages" data-mode="all">All stages</button>
@@ -181,17 +214,19 @@
       </div>
     </div>
     <div class="stack">
-      <div id="sanOut" class="card out empty"><p class="empty-msg">Clean text plus per-stage
-        accounting appears here.</p></div>
+      <div id="sanOut" class="card out empty result" role="region" aria-live="polite" aria-label="Sanitizer result">
+        <p class="empty-msg">Clean text, per-stage accounting and an automatic re-scan that proves
+          the payload died.</p></div>
     </div>
   </section>
 
   <!-- ══════════════════════════════ INSPECT ══════════════════════════════ -->
-  <section class="panel" id="panel-inspect" hidden>
+  <section class="panel" id="panel-inspect" role="tabpanel" aria-labelledby="tab-inspect" hidden>
     <div class="card">
-      <div class="card-h"><h2>Code point inspector</h2>
+      <div class="card-h"><h2><label for="inspText">Code point inspector</label></h2>
         <div class="row-gap">
-          <button class="btn tiny ghost" data-action="paste-last" data-target="inspect">Reuse last output</button>
+          <button class="btn tiny ghost" data-action="clipboard" data-target="inspText">Paste ⧉</button>
+          <button class="btn tiny ghost" data-action="paste-last" data-target="inspect">Last output</button>
           <label class="check"><input type="checkbox" id="onlySuspect"> suspicious only</label>
         </div>
       </div>
@@ -199,23 +234,25 @@
       <button class="btn primary" data-action="inspect">
         <span class="spin" id="spin-inspect" hidden></span> Inspect <kbd>Ctrl</kbd><kbd>↵</kbd>
       </button>
-      <div id="inspOut" class="stack" style="margin-top:1rem"></div>
+      <div id="inspOut" class="stack" style="margin-top:1rem" aria-live="polite"></div>
     </div>
   </section>
 
   <!-- ══════════════════════════════ REFERENCE ════════════════════════════ -->
-  <section class="stack panel" id="panel-reference" hidden>
+  <section class="stack panel" id="panel-reference" role="tabpanel" aria-labelledby="tab-reference" hidden>
     <div class="card">
       <div class="card-h"><h2>Channel catalogue</h2>
-        <input class="search" id="schemeSearch" placeholder="filter by id, tag, detection vector…">
+        <input class="search" id="schemeSearch" type="search" placeholder="filter by id, tag, detection vector…">
       </div>
       <div id="schemeTable" class="table-wrap"></div>
     </div>
     <div class="grid two">
       <div class="card">
-        <div class="card-h"><h2>Special character reference</h2></div>
+        <div class="card-h"><h2>Special character reference</h2>
+          <input class="search" id="charSearch" type="search" placeholder="filter code points…">
+        </div>
         <p class="hint">Every code point any channel touches. Click a row to copy the character —
-          then paste it into <em>Detect</em>.</p>
+          then paste it into <b>Detect</b>.</p>
         <div id="charTable" class="table-wrap scroll"></div>
       </div>
       <div class="stack">
@@ -224,7 +261,9 @@
           <div id="stageTable" class="table-wrap"></div>
         </div>
         <div class="card" id="cliCard">
-          <div class="card-h"><h2>Same features from the shell</h2></div>
+          <div class="card-h"><h2>Same features from the shell</h2>
+            <button class="btn tiny ghost" data-action="copy-cli">copy</button>
+          </div>
           <pre class="cli" id="cliCheat"></pre>
         </div>
       </div>
@@ -233,14 +272,56 @@
 </main>
 
 <footer class="foot">
-  <p><strong>Built for provenance and defence.</strong> GlyphMark writes marks you can then find
-    and destroy. Keyed frames are obfuscated, not encrypted — treat any mark as removable, and
-    disclose watermarking to your users.</p>
+  <p><strong>Built for provenance and defence.</strong> GlyphMark writes marks you can then find and
+    destroy. Keyed frames are obfuscated, not encrypted — treat any mark as removable, and disclose
+    watermarking to your users. <button class="btn tiny ghost" data-action="help">help &amp; shortcuts</button></p>
   <p class="dim">GlyphMark v{{ version }} · one core behind <code>glyphmark</code> and
     <code>/api/*</code> · <code>glyphmark verify</code> round-trips every channel</p>
 </footer>
 
 <div id="toasts" class="toasts" aria-live="polite"></div>
+
+<div class="overlay" id="help" hidden role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+  <div class="sheet">
+    <div class="card-h"><h2 id="helpTitle">GlyphMark — what this is</h2>
+      <button class="btn tiny ghost" data-action="help-close">close ✕</button></div>
+    <p>Text watermarking exploits the gap between <b>rendered glyphs</b> and <b>code points</b>: a
+      payload can ride inside a string without changing what a reader sees. This lab lets you write a
+      mark, prove it is there, and destroy it — in the same session, from either interface.</p>
+
+    <h3>Keyboard</h3>
+    <div class="keys">
+      <kbd>Ctrl/⌘ + ↵</kbd><span>run the current panel’s action</span>
+      <kbd>Alt/⌥ + 1…6</kbd><span>jump between panels</span>
+      <kbd>?</kbd><span>open this sheet · <kbd>Esc</kbd> closes it</span>
+      <kbd>/</kbd><span>focus the channel or table filter</span>
+      <kbd>←/→ ↑/↓ + Enter</kbd><span>navigate the channel picker</span>
+    </div>
+
+    <h3>Reading a detection report</h3>
+    <ul>
+      <li><b>watermark-confirmed</b> — a GlyphMark frame was recovered: magic byte and CRC32 both valid.</li>
+      <li><b>high-risk / suspicious</b> — heuristics only: invisible code points, confusables, mixed
+        scripts or NFKC drift. Third-party marks look like this.</li>
+      <li>The <b>Plane-14 mirror</b> line decodes tag-block code points back to ASCII — that is how
+        hidden-instruction injection becomes visible.</li>
+    </ul>
+
+    <h3>Choosing a channel</h3>
+    <ul>
+      <li><b>Capacity</b>: <code>vs-bytes</code> (1 byte per anchor) and <code>tags</code> (6 bits/char) carry most.</li>
+      <li><b>Survival</b>: <code>homoglyph</code> outlives paste/JSON/social filters; zero-widths die first.</li>
+      <li><b>Detectability</b>: everything here is caught by <em>Sanitize</em> — that is the point.</li>
+    </ul>
+
+    <h3>Exit codes shared with the CLI</h3>
+    <div class="table-wrap"><table class="codes"><tbody id="codeTable"></tbody></table></div>
+
+    <h3>Etiquette</h3>
+    <p>Undisclosed watermarking of other people’s text is covert data collection. Character-level marks
+      also break exact matching, search and dedup — the same property that makes homograph phishing work.</p>
+  </div>
+</div>
 
 <!-- order matters: app.js defines themeState() before Alpine initialises -->
 <script defer src="{{ url_for('static', filename='app.js') }}"></script>

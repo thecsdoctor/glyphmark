@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import pathlib
+import re
+
 import pytest
 
 from glyphmark.codec import encode, sample_carrier
@@ -134,3 +137,55 @@ def test_oversized_body_is_rejected(client) -> None:
     assert info["truncated"] is True and len(info["rows"]) == 50
     assert client.post("/api/detect", json={"text": huge[:1000]}).status_code == 200
     assert client.post("/api/detect", json={"text": huge * 13}).status_code == 413
+
+
+# --------------------------------------------------------------- UI contract
+# The page and app.js are written by hand, so the wiring between them is asserted
+# here: every id the script looks up must exist in the markup, and the response
+# field names the script reads must match what the endpoints actually emit.
+
+def _asset(name: str) -> str:
+    path = pathlib.Path(__file__).resolve().parent.parent / "src" / "glyphmark" / "web" / name
+    return path.read_text(encoding="utf-8")
+
+
+def test_every_id_the_script_touches_exists_in_the_markup(client) -> None:
+    html = client.get("/").data.decode()
+    js = _asset("static/app.js")
+    referenced = set(re.findall(r'\$\("([A-Za-z0-9_]+)"\)', js))
+    assert len(referenced) > 20                       # the query is really finding ids
+    missing = {i for i in referenced if f'id="{i}"' not in html}
+    assert not missing, f"app.js looks up ids that the template does not define: {sorted(missing)}"
+
+
+def test_script_reads_only_fields_the_api_emits(client) -> None:
+    js = _asset("static/app.js")
+    for stale in ("cover_text", "risk_level", "text_without_payload", "visible_text",
+                  "state.meta.stages.", "sanitized_text", "x.cp"):
+        assert stale not in js, f"app.js still uses the removed field {stale!r}"
+    meta = client.get("/api/meta").get_json()
+    for key in ("sanitize_stages", "exit_codes", "samples", "placements", "schemes", "characters"):
+        assert key in js and key in meta
+    assert "payload_text" in js and "removed_total" in js and "frame_signatures" in js
+
+
+def test_markup_carries_the_accessibility_scaffolding(client) -> None:
+    html = client.get("/").data.decode()
+    assert html.index('<a class="skip"') < html.index("<header")
+    assert html.count('role="tab"') >= 6 and html.count('role="tabpanel"') >= 6
+    assert 'role="dialog"' in html and 'aria-modal="true"' in html
+    assert 'aria-live="polite"' in html
+    assert 'id="ribbon"' in html and 'aria-label="Workbench pipeline"' in html
+    for field in ("cover", "payload", "decText", "detText", "sanText", "inspText"):
+        assert f'<label for="{field}"' in html or f'<label for="{field}">' in html, field
+
+
+def test_cdn_is_presentation_only(client) -> None:
+    """CDN assets must stay cosmetic: logic lives in the locally served app.js."""
+    html = client.get("/").data.decode()
+    scripts = re.findall(r'<script[^>]*src="([^"]+)"', html)
+    assert any(s.startswith("https://cdn.jsdelivr.net") for s in scripts)
+    assert any("/static/app.js" in s for s in scripts)
+    assert all(s.startswith("https://") or "/static/" in s for s in scripts)
+    css = _asset("static/styles.css")
+    assert "@import" not in css and "http://" not in css.replace("http://www.w3.org", "")

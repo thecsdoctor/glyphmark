@@ -8,3 +8,6 @@ build/
 *.egg-info/
 .coverage
 *.marked.txt
+
+# dev-only UI test dependency
+node_modules/
