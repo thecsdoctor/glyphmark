@@ -30,6 +30,7 @@
   <div class="topmeta">
     <span class="pill" title="Watermark channels available"><strong id="channelCount">13</strong> channels</span>
     <span class="pill ghost" title="Every result shows the equivalent shell command">CLI ⇄ API parity</span>
+    <a class="pill docs" href="/docs/" title="Usage docs for the UI and the CLI — build with: glyphmark docs build">Docs</a>
     <span class="pill ghost">v<span id="versionTag">{{ version }}</span></span>
     <button class="icon-btn" data-action="help" title="Help &amp; keyboard shortcuts (?)" aria-label="Help and keyboard shortcuts">?</button>
     <button class="icon-btn" @click="toggle()" x-text="dark ? '☾' : '☀'" title="Toggle light or dark theme" aria-label="Toggle colour theme">☾</button>
@@ -276,7 +277,8 @@
     destroy. Keyed frames are obfuscated, not encrypted — treat any mark as removable, and disclose
     watermarking to your users. <button class="btn tiny ghost" data-action="help">help &amp; shortcuts</button></p>
   <p class="dim">GlyphMark v{{ version }} · one core behind <code>glyphmark</code> and
-    <code>/api/*</code> · <code>glyphmark verify</code> round-trips every channel</p>
+    <code>/api/*</code> · <code>glyphmark verify</code> round-trips every channel ·
+    <a href="/docs/">usage docs</a> (<code>glyphmark docs build</code> to render them)</p>
 </footer>
 
 <div id="toasts" class="toasts" aria-live="polite"></div>
@@ -288,6 +290,11 @@
     <p>Text watermarking exploits the gap between <b>rendered glyphs</b> and <b>code points</b>: a
       payload can ride inside a string without changing what a reader sees. This lab lets you write a
       mark, prove it is there, and destroy it — in the same session, from either interface.</p>
+
+    <h3>Docs</h3>
+    <p>The <b>Docs</b> pill opens <code>/docs/</code> — full usage documentation for both interfaces,
+      built locally with <code>glyphmark docs build</code> (MkDocs Material). It says so politely if
+      it has not been built yet.</p>
 
     <h3>Keyboard</h3>
     <div class="keys">

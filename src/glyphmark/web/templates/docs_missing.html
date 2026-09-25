@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Docs not built · GlyphMark</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>⌁</text></svg>">
+</head>
+<body data-theme="dark">
+<main class="wrap" style="padding-top:2rem">
+  <div class="card" style="max-width:760px">
+    <div class="card-h">
+      <h2>The documentation is not built yet</h2>
+      <a class="btn tiny ghost" href="{{ url_for('index') }}">← back to the lab</a>
+    </div>
+    <p class="hint">These pages are <b>MkDocs Material</b>, built from <code>docs/</code> and served by
+      this same Flask app under <code>/docs/</code>. Nothing is fetched at runtime, so the docs work
+      offline — you just have to render them once.</p>
+
+    <pre class="cli" id="cmd">uv sync --extra docs
+glyphmark docs build
+glyphmark docs status</pre>
+
+    <p class="row-gap">
+      <button class="btn tiny ghost" id="copy">copy commands</button>
+      <span class="dim">then reload this page</span>
+    </p>
+
+    <div class="card-h" style="margin-top:1rem"><h2>Where things live</h2></div>
+    <div class="kv">
+      <span class="chip">build dir <b class="mono">{{ info.build_dir }}</b></span>
+      <span class="chip">sources <b class="mono">{{ info.source_dir or "not found" }}</b></span>
+      <span class="chip">config <b class="mono">{{ info.config or "not found" }}</b></span>
+      <span class="chip {{ 'ok' if info.built else 'warn' }}">built: <b>{{ 'yes' if info.built else 'no' }}</b></span>
+    </div>
+    {% if info.pages %}
+    <p class="hint">Pages: {{ info.pages | join(", ") }}</p>
+    {% endif %}
+    <p class="hint">Override the locations with <code>GLYPHMARK_DOCS_DIR</code> /
+      <code>GLYPHMARK_DOCS_CONFIG</code>. To edit while reading:
+      <code>uv run --extra docs mkdocs serve -a 127.0.0.1:8100</code>.</p>
+    <p class="dim">GlyphMark v{{ version }}</p>
+  </div>
+</main>
+<script>
+  document.getElementById("copy").addEventListener("click", () => {
+    const text = document.getElementById("cmd").textContent;
+    const done = () => { document.getElementById("copy").textContent = "copied"; };
+    if (navigator.clipboard) { navigator.clipboard.writeText(text).then(done, done); }
+  });
+</script>
+</body>
+</html>

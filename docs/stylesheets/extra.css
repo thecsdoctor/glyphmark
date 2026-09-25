@@ -1,0 +1,49 @@
+/* GlyphMark docs — small adjustments on top of MkDocs Material.
+   Keep it short: the theme does the work, this only fixes what the lab needs. */
+
+:root {
+  --gm-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+/* tables carry a lot of code identifiers in these docs — make them scannable */
+.md-typeset table:not([class]) {
+  font-size: .74rem;
+}
+.md-typeset table:not([class]) code {
+  font-size: .74rem;
+  padding: .05rem .2rem;
+}
+.md-typeset td code, .md-typeset th code {
+  white-space: nowrap;
+}
+
+/* code blocks: slightly denser, and never wider than the panel */
+.md-typeset pre > code {
+  font-family: var(--gm-mono);
+  font-size: .72rem;
+  line-height: 1.45;
+}
+.md-content {
+  min-width: 0;
+}
+
+/* the exit-code and channel tables read better with tabular numbers */
+.md-typeset table:not([class]) td.num,
+.md-typeset table:not([class]) th.num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* admonition titles for the "identification vs heuristic" warnings */
+.md-typeset .admonition, .md-typeset details {
+  font-size: .76rem;
+}
+
+/* "← Back to the lab" nav item gets a subtle emphasis */
+.md-nav__link[href="/"] {
+  font-weight: 600;
+}
+
+/* keep keyboard kbd chips from wrapping mid-combination */
+.md-typeset kbd {
+  white-space: nowrap;
+}

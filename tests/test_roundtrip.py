@@ -175,3 +175,20 @@ def test_every_channel_declares_its_metadata() -> None:
         assert scheme.killed_by, f"{scheme.id} must name the sanitizer stage(s) that kill it"
         assert 1 <= scheme.stealth <= 5 and 1 <= scheme.survival <= 5
         assert scheme.bits_per_unit == scheme.radix.bit_length() - 1
+
+
+def test_listish_metadata_is_itemized_not_character_split() -> None:
+    """A channel may declare one note as a bare string; it must not become one item per letter.
+
+    The CLI prints each note as a bullet and the web UI maps over them, so a str leaking
+    through here shows up as 70 one-character bullets.
+    """
+    for scheme in SCHEMES:
+        for field in ("notes", "tags", "killed_by"):
+            items = getattr(scheme, field)
+            assert isinstance(items, tuple), f"{scheme.id}.{field} must be a tuple"
+            assert all(isinstance(i, str) for i in items)
+            assert all(len(i) > 1 for i in items), (
+                f"{scheme.id}.{field} looks character-split: {items[:4]!r}"
+            )
+        assert scheme.to_dict()["notes"] == list(scheme.notes)

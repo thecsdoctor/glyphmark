@@ -492,7 +492,8 @@ glyphmark sanitize --text-file in.txt --stage strip_tags --stage nfkc -e json
 glyphmark inspect  --text-file marked.txt --only-suspect
 glyphmark verify                              # encode+extract round trip, all channels
 glyphmark verify --scheme homoglyph
-glyphmark serve --host 127.0.0.1 --port 8123  # this UI`;
+glyphmark serve --host 127.0.0.1 --port 8123  # this UI
+glyphmark docs build && glyphmark docs status # usage docs, served at /docs/`;
 
 const PLACEMENT_LABELS = {
   spread: "Spread across the text (default, most natural)",
@@ -522,6 +523,7 @@ const state = {
   schemesById: {},
   symbolsById: {},          // scheme id -> Set(code point) used by that channel
   altsById: {},             // scheme id -> Map(alt code point -> base char)
+  basesById: {},            // scheme id -> Set(base char) for substitution channels
   defaultStages: [],
   alts: new Map(),          // union of all alternates -> base char
   scheme: "zw-octal",
@@ -554,31 +556,31 @@ function themeState() {
 /* ------------------------------------------------------------------ UI logic */
 const UI = {
   /* ---- capacity ------------------------------------------------------------ */
+  /* Carrier positions, mirroring Scheme.slots() in schemes.py exactly, so the
+     meter in the browser and the server's own capacity check never disagree. */
   carrierUnits(cover, scheme) {
     const symbols = state.symbolsById[scheme.id] || new Set();
-    const alts = state.altsById[scheme.id] || new Map();
+    const bases = state.basesById[scheme.id] || new Set();
+    const chars = [...cover];
     if (scheme.family === "insert") {
-      if (scheme.id === "ascii-ctrl") {
-        return cover.split("\n").reduce(
-          (n, line) => n + Math.max(0, line.trim().split(/\s+/).filter(Boolean).length), 0);
+      if (scheme.anchor_required) {
+        return chars.filter((ch) => !symbols.has(ch.codePointAt(0))).length;
       }
-      let n = 0;
-      for (const ch of cover) { if (!symbols.has(ch.codePointAt(0))) n += 1; }
-      return scheme.anchor_required ? n + 1 : Math.max(0, n - 1);
+      return chars.length + 1;                       // every character boundary
     }
-    let usable = 0;
-    for (const ch of cover) {
-      const cp = ch.codePointAt(0);
-      if (symbols.has(cp) || alts.has(cp)) usable += 1;
-    }
-    return usable;
+    return chars.filter((ch) => symbols.has(ch.codePointAt(0)) || bases.has(ch)).length;
   },
 
+  /* Frame overhead: 6 header bytes + CRC32. Insert channels spend it once;
+     substitution channels pay for a header phase before any payload bits. */
   capacityBytes(cover, scheme) {
-    if (!cover) return { units: 0, bytes: 0, need: 0, fits: false };
-    const units = this.carrierUnits(cover, scheme);
-    const bytes = Math.floor((units * scheme.bits_per_unit) / 8);
     const need = bytesOf(val("payload"));
+    if (!cover) return { units: 0, bytes: 0, need, fits: false };
+    const units = this.carrierUnits(cover, scheme);
+    const bpu = scheme.bits_per_unit;
+    const bytes = scheme.family === "insert"
+      ? Math.max(0, Math.floor((units * bpu - 80) / 8))
+      : Math.max(0, Math.floor((Math.max(0, units - Math.ceil(80 / bpu)) * bpu - 32) / 8));
     return { units, bytes, need, fits: bytes >= need && need > 0 };
   },
 
@@ -596,7 +598,7 @@ const UI = {
     box.innerHTML = `
       <div class="row-gap" style="justify-content:space-between">
         <span><b>${cap.units.toLocaleString()}</b> carrier units → up to <b>${cap.bytes} B</b> payload
-          (${scheme.bits_per_unit} bit/unit)</span>
+          (${scheme.bits_per_unit} bit/unit, frame overhead included)</span>
         <span class="${cap.bytes >= cap.need ? "" : "full"}">payload needs <b>${cap.need} B</b></span>
       </div>
       <div class="meter ${cap.bytes >= cap.need ? "" : "hot"}" style="margin-top:.3rem">
@@ -1143,6 +1145,7 @@ async function boot() {
     });
     state.symbolsById[s.id] = symbols;
     state.altsById[s.id] = alts;
+    state.basesById[s.id] = new Set(alts.values());   // characters a substitution may start from
   });
 
   // selects

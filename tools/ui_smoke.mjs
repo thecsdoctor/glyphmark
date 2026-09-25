@@ -91,6 +91,7 @@ check("meta loaded", !!state.meta);
 check("channels registered", Object.keys(state.schemesById).length === 13,
   Object.keys(state.schemesById).length + " channels");
 check("header counts channels", $("channelCount").textContent === "13");
+check("header links to the docs", !!document.querySelector('a[href="/docs/"]'));
 check("reference tables populated", text("schemeTable").includes("zw-octal") && text("charTable").includes("U+2062"));
 check("CLI cheat sheet rendered", $("cliCheat").textContent.includes("glyphmark sanitize"));
 const nStages = state.meta.sanitize_stages.length;
@@ -179,6 +180,25 @@ check("UTF-8 byte view renders hex", /^[0-9A-F ]+$/m.test(text("encOut-pre")));
 click(document.querySelector('#encOut [data-view="rendered"]'));
 check("auto re-scan runs after embed", await wait(() => text("encOut").includes("auto re-scan")));
 check("auto re-scan confirms the mark", text("encOut").includes("watermark-confirmed"));
+
+/* the browser's capacity estimate must agree with the server's own arithmetic */
+const serverSide = await (await fetch(BASE + "/api/encode", {
+  method: "POST", headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ cover: COVER_TEXT, payload: PAYLOAD_TEXT, scheme: "zw-binary" }),
+})).json();
+const estimate = UI.capacityBytes(COVER_TEXT, state.schemesById["zw-binary"]);
+check("client capacity estimate matches the server",
+  estimate.units === serverSide.carrier_units && estimate.bytes === serverSide.capacity_bytes,
+  `client ${estimate.units}u/${estimate.bytes}B vs server ${serverSide.carrier_units}u/${serverSide.capacity_bytes}B`);
+await pick("tags");
+const tagsEst = UI.capacityBytes(COVER_TEXT, state.schemesById["tags"]);
+const tagsServer = await (await fetch(BASE + "/api/encode", {
+  method: "POST", headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ cover: COVER_TEXT, payload: PAYLOAD_TEXT, scheme: "tags" }),
+})).json();
+check("estimate holds for another channel", tagsEst.units === tagsServer.carrier_units &&
+  tagsEst.bytes === tagsServer.capacity_bytes, `client ${tagsEst.bytes}B vs server ${tagsServer.capacity_bytes}B`);
+await pick("zw-binary");
 check("ribbon advanced", steps()[1].dataset.state === "done" && steps()[2].dataset.state === "done",
   steps().map((s) => `${s.dataset.step}:${s.dataset.state}`).join(" "));
 

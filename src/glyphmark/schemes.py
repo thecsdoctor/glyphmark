@@ -501,7 +501,9 @@ def _build() -> list[Scheme]:
         data["index"] = i
         data["pairs"] = tuple(tuple(p) for p in data.get("pairs", ()))
         for key in ("killed_by", "notes", "tags"):
-            data[key] = tuple(data.get(key, ()))
+            value = data.get(key, ())
+            # a bare string means "one item"; iterating it one character at a time is never intended
+            data[key] = (value,) if isinstance(value, str) else tuple(value)
         scheme = Scheme(**data)
         n_alts = max((len(v) for v in scheme.alternatives.values()), default=1)
         if scheme.family == FAMILY_SUBSTITUTE and 1 + n_alts != scheme.radix:

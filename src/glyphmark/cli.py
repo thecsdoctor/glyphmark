@@ -143,6 +143,7 @@ def main(ctx: click.Context, ) -> None:
     \b
     Embed, extract, detect and sanitize invisible/look-alike text watermarks.
     Everything here is also available as a web UI + JSON API:  glyphmark serve
+    Usage docs (mkdocs-material, served at /docs/):  glyphmark docs build
     \b
     Exit codes: 0 ok · 1 error · 3 no payload · 4 corrupt/wrong key ·
                 5 carrier too small · 6 risk threshold hit
@@ -416,6 +417,77 @@ def cmd_verify(only: tuple[str, ...], key: str | None, as_json: bool) -> None:
                 for r in results])
     if not all(r["ok"] for r in results):
         sys.exit(1)
+
+
+@main.group("docs")
+def cmd_docs() -> None:
+    """Build the documentation that the web app serves under /docs/."""
+
+
+@cmd_docs.command("build")
+@click.option("-o", "--out", help="Output directory (default: the one /docs/ serves).")
+@click.option("--strict/--no-strict", default=False, help="Turn warnings and broken links into errors.")
+@click.option("--clean/--no-clean", default=True, help="Drop previous output first (default: clean).")
+def cmd_docs_build(out: str | None, strict: bool, clean: bool) -> None:
+    """Render docs/ with mkdocs-material into a static site."""
+    from . import docs as docs_mod
+
+    result = docs_mod.build(out=out, strict=strict, clean=clean)
+    if not result["ok"]:
+        for line in (result.get("output") or "").splitlines()[-25:]:
+            click.secho(line, err=True)
+        _fail(GlyphMarkError(result["error"] or "mkdocs build failed"))
+        return
+    tail = (result.get("output") or "").splitlines()[-8:]
+    for line in tail:
+        click.echo(line)
+    click.secho(f"\ndocs built -> {result['output_dir']}", fg="green")
+    click.echo(f"serve it with:  glyphmark serve   (then open {docs_mod.URL})")
+
+
+@cmd_docs.command("check")
+@click.option("--strict/--no-strict", default=True, help="Fail on warnings and broken links.")
+def cmd_docs_check(strict: bool) -> None:
+    """Build into a temp directory: broken links and warnings exit 1 (CI gate)."""
+    from . import docs as docs_mod
+
+    result = docs_mod.check(strict=strict)
+    if not result["ok"]:
+        click.secho((result.get("output") or "")[-4000:], err=True)
+        _fail(GlyphMarkError(result["error"] or "docs build failed"))
+        return
+    click.secho("docs OK — no broken links, no warnings", fg="green")
+    click.echo(f"(strict build in {result['output_dir']})")
+
+
+@cmd_docs.command("status")
+@click.option("--json", "as_json", is_flag=True)
+def cmd_docs_status(as_json: bool) -> None:
+    """Show where the docs live and whether they have been built."""
+    from . import docs as docs_mod
+
+    info = docs_mod.status()
+    if as_json:
+        click.echo(json.dumps(info, indent=2))
+        return
+    click.echo(f"built:      {'yes' if info['built'] else 'no'}   ({info['url']})")
+    click.echo(f"sources:    {info['source_dir'] or 'not found'}")
+    click.echo(f"config:     {info['config'] or 'not found'}")
+    click.echo(f"build dir:  {info['build_dir']}")
+    if info["pages"]:
+        click.echo(f"pages:      {', '.join(info['pages'])}")
+    if not info["built"]:
+        click.secho("\nnot built yet:  glyphmark docs build", fg="yellow")
+    if not _mkdocs_installed():
+        click.secho(f"mkdocs not installed:  {info['install_hint']}", fg="yellow")
+
+
+def _mkdocs_installed() -> bool:
+    try:
+        import mkdocs  # noqa: F401
+    except ImportError:
+        return False
+    return True
 
 
 @main.command()

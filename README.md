@@ -38,6 +38,26 @@ uv run glyphmark verify    # round-trip self test of every channel
 
 Without `uv`: `python -m venv .venv && . .venv/bin/activate && pip install -e '.[dev]'`.
 
+Extras: `dev` (pytest, ruff) and `docs` (mkdocs + mkdocs-material, used by `glyphmark docs build`).
+
+## Documentation
+
+The usage docs for both interfaces are **MkDocs Material, built and served by this app**:
+
+```bash
+uv sync --extra docs
+uv run glyphmark docs build          # renders docs/ -> build/docs
+uv run glyphmark serve --port 8123   # lab UI on /, docs on /docs/
+uv run glyphmark docs status         # where they live, whether they are built
+uv run glyphmark docs check          # strict build in a temp dir: broken links fail (CI)
+```
+
+Nine pages: overview, quickstart, CLI reference, web UI guide, channel catalogue, defence playbook,
+HTTP API, reference (frame format, keyed mode, limits) and responsible use. The build is static and
+same-origin only — `/docs/` fetches nothing remote, and `tests/test_docs.py` asserts the pages agree
+with the code (documented commands, flags, exit codes, channel numbers, sanitizer stages, detection
+kinds and JSON field names all come from the registry itself).
+
 ## The 13 channels
 
 | id | family | bit/unit | stealth | survival | where it fails |
@@ -96,6 +116,7 @@ stdout stays byte-exact; diagnostics go to stderr (`--report`).
 | `glyphmark inspect` | per-code-point forensics: `--only-suspect`, `--json` |
 | `glyphmark verify` | encode+extract round trip for every channel (`--scheme`, `--json`) |
 | `glyphmark serve` | web UI + JSON API: `--host --port --debug` |
+| `glyphmark docs` | usage docs: `build [-o DIR] [--strict]`, `check` (CI), `status [--json]` |
 
 Exit codes: `0` ok · `1` error · `2` bad arguments · `3` nothing found · `4` corrupt frame /
 wrong key · `5` carrier too small · `6` detection threshold reached.
@@ -154,6 +175,7 @@ What the UI does beyond the raw API:
 | `POST /api/sanitize` | `glyphmark sanitize` |
 | `POST /api/inspect` | `glyphmark inspect` |
 | `POST /api/verify` | `glyphmark verify` |
+| `GET /docs/` | usage docs (mkdocs-material build output, same origin) |
 | `GET /healthz` | liveness |
 
 Core errors map to HTTP status **and** carry the CLI exit code in the JSON body
@@ -200,8 +222,10 @@ src/glyphmark/
   analysis.py   code-point forensics + covert-channel detection + risk scoring
   sanitize.py   staged sanitizer with per-stage accounting
   cli.py        click CLI (the one non-interactive entry point)
-  web/app.py    Flask factory: UI + /api/*, both calling codec/analysis/sanitize directly
+  web/app.py    Flask factory: UI + /api/* + /docs/, calling codec/analysis/sanitize directly
   web/templates/index.html, web/static/{styles.css,app.js}
+  docs.py       locate/build/status for the documentation, served by web/app.py under /docs/
+docs/           markdown usage docs   ·  mkdocs.yml  MkDocs Material config
 tests/          round-trip, tamper, detection, sanitizer, CLI and Flask API tests
 tools/ui_smoke.mjs  headless DOM walk-through of the UI (jsdom; dev-only npm dependency)
 ```
@@ -213,9 +237,10 @@ what `codec` returns, and `tests/test_cli.py` does the same for the shell.
 ## Development
 
 ```bash
-uv run pytest -q          # 161 tests: every channel round-trips, tamper & key checks,
+uv run pytest -q          # 184 tests: every channel round-trips, tamper & key checks,
                           # sanitize-then-detect-must-come-back-clean, CLI + API behaviour,
-                          # plus UI markup/JS contract tests (ids, field names, ARIA, CDN split)
+                          # UI markup/JS contract tests (ids, field names, ARIA, CDN split)
+                          # and docs tests (strict mkdocs build + docs-vs-code drift guards)
 uv run ruff check src tests
 uv run ruff format src tests
 
@@ -223,6 +248,7 @@ uv run ruff format src tests
 uv run glyphmark serve --port 8123 &
 npm install
 npm run ui-smoke            # == node tools/ui_smoke.mjs ; honours GM_BASE=http://host:port
+                          # also asserts the browser's capacity meter matches the server's math
 ```
 
 The page's logic is framework-free vanilla JS (`web/static/app.js`), so the lab still

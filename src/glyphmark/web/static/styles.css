@@ -434,3 +434,7 @@ table.codes { margin-top: .4rem; }
 /* recommended-channel chip tick */
 .reco .tick { color: var(--ok); font-weight: 700; margin-right: .15rem; }
 .reco .chip.warn .tick { color: var(--warn); }
+
+/* the Docs pill is a link, so it has to look like one */
+a.pill { text-decoration: none; }
+a.pill:hover { border-color: var(--accent); color: var(--txt); }

@@ -25,6 +25,11 @@ glyphmark = "glyphmark.cli:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "ruff>=0.6"]
+docs = [
+    "mkdocs>=1.6",
+    "mkdocs-material>=9.5",
+    "pymdown-extensions>=10.0",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -32,6 +37,11 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/glyphmark"]
+
+# docs sources ship in the sdist so `glyphmark docs build` works from a source install
+[tool.hatch.build.targets.sdist]
+artifacts = ["docs"]
+include = ["src", "docs", "tests", "tools", "README.md", "pyproject.toml"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
