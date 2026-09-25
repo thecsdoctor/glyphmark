@@ -34,7 +34,7 @@ jobs:
       sdist: ${{ steps.meta.outputs.sdist }}
       wheel: ${{ steps.meta.outputs.wheel }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Resolve version
         id: meta
@@ -127,7 +127,7 @@ jobs:
       contents: write            # create the GitHub Release
     environment: release
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/download-artifact@v4
         with:
