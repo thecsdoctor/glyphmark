@@ -1,0 +1,30 @@
+# Build-context hygiene. Deliberately conservative: only things that are never needed at build
+# time are excluded, because a file ignored here silently breaks whichever stage COPYs it. The
+# context that remains (source, docs, tests, tools, governance markdown, workflows) is a few
+# hundred kilobytes, and each stage chooses exactly what it copies.
+.git
+.gitignore
+.venv
+.env
+.env.*
+node_modules
+npm-debug.log*
+__pycache__
+*.pyc
+*.pyo
+.pytest_cache
+.ruff_cache
+.coverage
+coverage.xml
+build/
+dist/
+*.egg-info
+*.marked.txt
+requirements-audit.txt
+requirements.sbom.txt
+release-notes.md
+*.log
+.DS_Store
+
+# The documentation *sources* are needed by the docs stage. The generated site under build/ is
+# not: it is rebuilt inside the image, so an image can never ship docs that drifted from its code.

@@ -31,6 +31,25 @@ def read(rel: str) -> str:
     return (ROOT / rel).read_text(encoding="utf-8")
 
 
+def _in_git_worktree() -> bool:
+    """True when this checkout is a git worktree with git installed.
+
+    Two of the checks below assert properties of version control itself. They are meaningless in a
+    container image or an unpacked sdist (no .git, often no git binary), where the rest of the
+    suite still applies - so they skip there instead of passing vacuously.
+    """
+    try:
+        out = subprocess.run(
+            ["git", "rev-parse", "--is-inside-work-tree"],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return out.returncode == 0 and out.stdout.strip() == "true"
+
+
 def _jsonc(text: str) -> str:
     """Strip // comments (devcontainer.json is JSONC)."""
     return "\n".join(line for line in text.splitlines() if not line.lstrip().startswith("//"))
@@ -383,6 +402,7 @@ def test_release_workflow_verifies_its_own_tag():
     assert "gh release create" in release
 
 
+@pytest.mark.skipif(not _in_git_worktree(), reason="needs a git worktree and the git binary")
 def test_repository_hygiene_files_are_not_gitignored():
     """Artefacts that CI and reviewers need must never be ignored by accident."""
     ignored = subprocess.run(

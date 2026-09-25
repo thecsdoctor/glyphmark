@@ -41,14 +41,36 @@ PATTERNS = ("*.py", "*.js", "*.mjs", "*.cjs", "*.css", "*.html")
 
 
 def tracked_files() -> list[Path]:
-    """Source files under version control, so generated and ignored trees are skipped."""
-    out = subprocess.run(
-        ["git", "-C", str(REPO), "ls-files", "-z", *PATTERNS],
-        capture_output=True,
-        check=True,
-        text=True,
-    )
+    """Source files to check: git's index if there is one, otherwise a scan of the tree.
+
+    The git path is what CI uses (it honours .gitignore for free). The fallback matters for the
+    two other places this runs: inside a container image and inside an unpacked sdist, where
+    there is no .git directory but the same licence expectation applies.
+    """
+    try:
+        out = subprocess.run(
+            ["git", "-C", str(REPO), "ls-files", "-z", *PATTERNS],
+            capture_output=True,
+            check=True,
+            text=True,
+        )
+    except (OSError, subprocess.CalledProcessError):
+        return sorted(
+            path
+            for pattern in PATTERNS
+            for path in REPO.rglob(pattern)
+            if path.is_file() and not _unwanted(path)
+        )
     return [REPO / p for p in out.stdout.split("\0") if p]
+
+
+#: directories that never hold first-party source, whichever VCS is around
+SKIP_DIRS = {".git", ".venv", "node_modules", "build", "dist", "__pycache__", ".venv-smoke"}
+
+
+def _unwanted(path: Path) -> bool:
+    parts = set(path.relative_to(REPO).parts)
+    return bool(parts & SKIP_DIRS) or not path.is_relative_to(REPO)
 
 
 def has_header(text: str) -> bool:

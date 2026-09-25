@@ -1,0 +1,123 @@
+# GlyphMark — container composition.
+#
+#   docker compose up --build                        # lab UI + JSON API on http://127.0.0.1:8123 (docs on /docs/)
+#   docker compose run --rm smoke                    # end-to-end API check against the running app
+#   docker compose run --rm gate                     # defensive intake gate: fails if the sample is risky
+#   docker compose --profile test run --rm test      # the full test suite inside the image
+#   docker compose --profile docs up docs            # live-reload documentation authoring on :8000
+#
+# The published port is bound to 127.0.0.1 on purpose. This API can forge attribution onto any
+# text it is given and has no authentication, so it must not reach a routable interface without an
+# authenticating proxy in front of it (SECURITY.md). Set GM_BIND=0.0.0.0 only behind such a proxy.
+
+name: glyphmark
+
+# Every service here runs as the image's non-root uid, with no capabilities, a read-only root
+# filesystem, no privilege escalation and a scratch /tmp. Nothing needs more: the service is
+# stateless, it reads its venv and a prebuilt documentation directory, and it writes nothing.
+x-hardening: &hardening
+  init: true
+  read_only: true
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+  tmpfs:
+    - /tmp
+  environment:
+    PYTHONDONTWRITEBYTECODE: "1"
+
+# Modest, deliberate ceilings: a text-analysis service that receives a pathological input should
+# fail its own request, not the host next to it.
+x-resources: &resources
+  memory: 512m
+  cpus: "1.0"
+  pids: 256
+
+services:
+  app:
+    <<: *hardening
+    build:
+      context: .
+      target: runtime
+      args:
+        VERSION: ${VERSION:-0.1.0+container}
+        REVISION: ${REVISION:-unknown}
+    image: glyphmark:local
+    ports:
+      # 127.0.0.1 binding is the safe default; override with GM_BIND only behind auth.
+      - "${GM_BIND:-127.0.0.1}:${GM_PORT:-8123}:8123"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits: *resources
+    labels:
+      org.opencontainers.image.title: "GlyphMark"
+      org.opencontainers.image.licenses: "MIT"
+
+  # One-shot: proves the shipped image works over HTTP the way a user does - health, meta, an
+  # embed/extract round trip, keyed integrity failure, detection, sanitization, docs, and the
+  # security headers. stdlib only, so it runs inside the runtime image.
+  smoke:
+    <<: *hardening
+    build:
+      context: .
+      target: runtime
+    image: glyphmark:local
+    restart: "no"
+    depends_on:
+      app:
+        condition: service_healthy
+    entrypoint: ["python", "/opt/glyphmark/tools/container_smoke.py"]
+    command: ["--base", "http://app:8123"]
+
+  # Defensive usage example: scan a file and fail above a risk threshold - how you would gate a CMS
+  # publish or a prompt pipeline. Exit code 6 means "threshold hit", which makes it a CI step.
+  gate:
+    <<: *hardening
+    build:
+      context: .
+      target: runtime
+    image: glyphmark:local
+    restart: "no"
+    volumes:
+      - ./examples:/data:ro
+    entrypoint: ["/opt/venv/bin/glyphmark"]
+    command: ["detect", "--text-file", "/data/watermarked-sample.txt", "--fail-on-risk", "25"]
+
+  # The image's own test stage. The same checks also run while *building* --target test (that is
+  # what CI runs), so this service exists for iterating against a local checkout.
+  test:
+    <<: *hardening
+    profiles: ["test"]
+    build:
+      context: .
+      target: test
+    image: glyphmark:test
+    restart: "no"
+    command: ["pytest", "-q", "-p", "no:cacheprovider"]
+
+  # Documentation authoring with live reload. Not the served docs: the app serves those itself
+  # from a build made inside the image.
+  docs:
+    <<: *hardening
+    profiles: ["docs"]
+    build:
+      context: .
+      target: source
+    image: glyphmark:source
+    restart: "no"
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - ./docs:/src/docs:ro
+      - ./mkdocs.yml:/src/mkdocs.yml:ro
+      - glyphmark-docs-build:/src/build
+    tmpfs:
+      - /tmp
+      - /root/.cache
+    command: ["python", "-m", "mkdocs", "serve", "-a", "0.0.0.0:8000"]
+
+volumes:
+  # writable scratch for the docs profile only; the runtime never writes anywhere
+  glyphmark-docs-build:

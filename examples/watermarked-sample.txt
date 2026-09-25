@@ -1,0 +1,9 @@
+INCID‍ENT ⁢NOTE⁣ 202​6-09​-24/1⁡18 (​synt‌heti​c)
+
+​The i​ntak​e se​rvic​e ac⁡cepte⁢d a ⁠supp⁢ort ​tick⁣et c⁡ontai⁢ning⁡ an ⁠atta⁠chme‍nt ca⁣ptio⁣n. T‍he c⁢apti⁣on
+re⁡ache‌d th⁤e in‍cide⁠nt c‌hanne​l ve⁣rbat​im, ‌then⁡ into⁡ the⁠ sum⁠mari​ser,⁢ then⁢ int‌o th⁡e cu​stom⁠er
+re⁡ply.⁡ Not⁢hing⁢ in ‌the ⁡revie⁡w pi⁠peli‍ne f​lagg⁢ed it⁤.
+
+T‌his ⁡file‍ is ⁠a dem​onst⁡rati⁤on a​rtef‌act:⁣ it c⁣arri⁣es a‌ Gly⁢phMa⁢rk wa⁡term⁠ark ​writ‍ten ⁤with ‌the
+⁢`zw-⁣octa⁠l` c‌hanne⁤l, s‍o `g⁤lyph‌mark⁢ det⁤ect` ‌repo⁠rts ⁠zero⁡-wid⁤th co‍de p‌oint⁢s an​d a ⁠recov‌ered‍
+fra⁤me s‍igna‌ture⁢. The‌ pay⁠load​ is ⁣a sy⁤nthet⁡ic p⁣rove⁢nanc⁢e id‍; the⁠ tex‌t is⁣ fic​tion​al.
