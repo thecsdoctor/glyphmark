@@ -53,7 +53,7 @@ jobs:
           echo "sdist=glyphmark-$v.tar.gz" >> "$GITHUB_OUTPUT"
           echo "wheel=glyphmark-$v-py3-none-any.whl" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
 
@@ -99,7 +99,7 @@ jobs:
         with:
           name: dist-${{ needs.build.outputs.version }}
           path: dist
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
       - name: Install the wheel from scratch
